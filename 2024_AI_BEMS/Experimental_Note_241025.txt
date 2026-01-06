@@ -1,0 +1,36 @@
+# 학교 MAIN devID==2001 or others
+B0001, 2001, 해양과학고
+  nan_counts max= 675, missing_ratio= 0.4
+  rmse_opt= 10.56 with 69 features
+  lightgbm_model_opt_B0001_MainPowerPrediction_241025.txt
+
+B0004, 2001, 부개여자고
+  nan_counts max= 675, missing_ratio= 0.1
+  rmse_opt= 7.22 with 69 features
+  lightgbm_model_opt_B0004_MainPowerPrediction_241025.txt
+
+B0009, 2001, 부흥중
+  df_raw.iloc[int(len(df_raw)/2-1500):-1].copy()
+  nan_counts max= 675, missing_ratio= 0.0
+  rmse_opt= 9.34 with 69 features
+  lightgbm_model_opt_B0009_MainPowerPrediction_241025.txt
+
+B0011, 2001, 갑룡초
+  df_raw.iloc[int(len(df_raw)/2-1500):-1].copy()
+  nan_counts max= 675, missing_ratio= 0.0
+  rmse_opt= 9.23 with 69 features
+  lightgbm_model_opt_B0011_MainPowerPrediction_241025.txt
+
+B0014, 2001, 작전고
+  df_raw.iloc[int(len(df_raw)/2-1500):-1].copy()
+  nan_counts max= 675, missing_ratio= 0.0
+  rmse_opt= 9.25 with 69 features
+  lightgbm_model_opt_B0014_MainPowerPrediction_241025.txt
+
+B0017, 2001, 성리중
+  df_raw.iloc[int(len(df_raw)/2-1500):-1].copy()
+  nan_counts max= 675, missing_ratio= 0.0
+  rmse_opt= 9.28 with 69 features
+  lightgbm_model_opt_B0017_MainPowerPrediction_241025.txt
+  
+

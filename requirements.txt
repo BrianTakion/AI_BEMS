@@ -1,0 +1,38 @@
+# --- 필수/일반 ---
+ipykernel
+jupyterlab
+notebook
+numpy
+pandas
+matplotlib
+seaborn
+scikit-learn
+pyarrow
+
+# --- 웹(백엔드) ---
+fastapi
+uvicorn[standard]
+python-multipart
+
+# --- CSV/데이터 I/O ---
+polars
+openpyxl
+
+# --- Lint/Format ---
+ruff
+black
+
+# --- PyTorch (CPU 버전) ---
+# CPU 전용 버전: CUDA 인덱스 없이 설치하면 자동으로 CPU 버전 설치됨
+torch
+torchvision
+torchaudio
+
+# --- TensorFlow (CPU 버전) ---
+# CPU 전용 버전: tensorflow만 설치하면 자동으로 CPU 버전 설치됨
+tensorflow>=2.15.0,<2.17.0
+
+# --- Numba (CPU 모드) ---
+# Numba는 CPU와 GPU 모두 지원하지만, CPU 모드에서는 CUDA 없이도 작동
+# CuPy는 GPU 전용이므로 CPU 모드에서는 제외
+numba>=0.59.0

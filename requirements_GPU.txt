@@ -1,0 +1,38 @@
+# PyTorch CUDA 12.1 인덱스 (파일 최상단에 위치해야 함)
+--extra-index-url https://download.pytorch.org/whl/cu121
+
+# --- 필수/일반 ---
+ipykernel
+jupyterlab
+notebook
+numpy
+pandas
+matplotlib
+seaborn
+scikit-learn
+pyarrow
+
+# --- 웹(백엔드) ---
+fastapi
+uvicorn[standard]
+python-multipart
+
+# --- CSV/데이터 I/O ---
+polars
+openpyxl
+
+# --- Lint/Format ---
+ruff
+black
+
+# --- PyTorch (CUDA 12.1) ---
+torch
+torchvision
+torchaudio
+
+# --- TensorFlow (CUDA 12.1) ---
+tensorflow[and-cuda]
+
+# --- CuPy & Numba (CUDA 12.1) ---
+cupy-cuda12x
+numba

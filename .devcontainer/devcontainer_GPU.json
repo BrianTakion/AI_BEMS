@@ -1,0 +1,51 @@
+{
+  "name": "AI_BEMS(py312-slim, GPU)",
+  "image": "python:3.12-slim",
+  "remoteUser": "root",
+  "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+  "runArgs": [
+    "--init",
+    "--gpus", "all",
+    "--ipc=host",
+    "--ulimit", "memlock=-1",
+    "--ulimit", "stack=67108864",
+    "--cap-add=SYS_PTRACE",
+    "--security-opt=seccomp=unconfined"
+  ],
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind",
+    "source=pipcache,target=/root/.cache/pip,type=volume"
+  ],
+  "postCreateCommand": "apt-get update && apt-get install -y git && python -m pip install --upgrade pip && pip install -r /workspace/requirements.txt && echo 'export LD_LIBRARY_PATH=$(find /usr/local/lib/python3.12/site-packages/nvidia -name \"lib\" -type d 2>/dev/null | tr \"\\n\" \":\" | sed \"s/:$//\"):$LD_LIBRARY_PATH' >> ~/.bashrc",
+  "forwardPorts": [8000, 8888],
+  "containerEnv": {
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONUNBUFFERED": "1",
+    "LD_LIBRARY_PATH": "/usr/local/lib/python3.12/site-packages/nvidia/cuda_runtime/lib:/usr/local/lib/python3.12/site-packages/nvidia/cublas/lib:/usr/local/lib/python3.12/site-packages/nvidia/cufft/lib:/usr/local/lib/python3.12/site-packages/nvidia/curand/lib:/usr/local/lib/python3.12/site-packages/nvidia/cusolver/lib:/usr/local/lib/python3.12/site-packages/nvidia/cusparse/lib:/usr/local/lib/python3.12/site-packages/nvidia/cudnn/lib:/usr/local/lib/python3.12/site-packages/nvidia/cuda_cupti/lib:/usr/local/lib/python3.12/site-packages/nvidia/cuda_nvrtc/lib:/usr/local/lib/python3.12/site-packages/nvidia/nvjitlink/lib:/usr/local/lib/python3.12/site-packages/nvidia/nccl/lib:/usr/local/lib/python3.12/site-packages/nvidia/nvtx/lib:/usr/local/lib/python3.12/site-packages/nvidia/cusparselt/lib:/usr/local/lib/python3.12/site-packages/nvidia/cufile/lib:/usr/local/lib/python3.12/site-packages/nvidia/nvshmem/lib"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-toolsai.jupyter",
+        "ms-toolsai.jupyter-keymap",
+        "ms-toolsai.jupyter-renderers",
+        "ms-azuretools.vscode-docker",
+        "mechatroner.rainbow-csv",
+        "RandomFractalsInc.vscode-data-preview",
+        "esbenp.prettier-vscode",
+        "eamodio.gitlens",
+        "ms-vscode-remote.remote-wsl"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "jupyter.notebookFileRoot": "/workspace",
+        "jupyter.allowImportFromNotebook": true
+      }
+    }
+  }
+}
