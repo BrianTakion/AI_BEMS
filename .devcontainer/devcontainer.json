@@ -4,7 +4,10 @@
   "remoteUser": "root",
   "workspaceFolder": "/workspace",
   "features": {
-    "ghcr.io/devcontainers/features/git:1": {}
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
   },
   "runArgs": [
     "--init",
@@ -15,7 +18,7 @@
     "source=${localWorkspaceFolder},target=/workspace,type=bind",
     "source=pipcache,target=/root/.cache/pip,type=volume"
   ],
-  "postCreateCommand": "apt-get update && apt-get install -y git && python -m pip install --upgrade pip setuptools wheel && pip install --no-cache-dir -r /workspace/requirements.txt",
+  "postCreateCommand": "apt-get update && apt-get install -y git curl && python -m pip install --upgrade pip setuptools wheel && pip install --no-cache-dir -r /workspace/requirements.txt",
   "forwardPorts": [8000, 8888],
   "containerEnv": {
     "PYTHONDONTWRITEBYTECODE": "1",

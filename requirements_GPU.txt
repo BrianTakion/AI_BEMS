@@ -25,6 +25,9 @@ openpyxl
 ruff
 black
 
+# --- 패키지 관리 ---
+uv
+
 # --- PyTorch (CUDA 12.1) ---
 torch
 torchvision

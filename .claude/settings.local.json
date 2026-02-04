@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:ors.gir.go.kr)",
+      "Bash(curl:*)",
+      "WebSearch",
+      "Bash(xargs:*)",
+      "Bash(grep:*)",
+      "Bash(wc:*)",
+      "WebFetch(domain:www.remotion.dev)",
+      "Bash(git config:*)",
+      "Bash(git add:*)",
+      "Bash(git rm:*)"
+    ]
+  }
+}

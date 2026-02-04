@@ -4,7 +4,10 @@
   "remoteUser": "root",
   "workspaceFolder": "/workspace",
   "features": {
-    "ghcr.io/devcontainers/features/git:1": {}
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
   },
   "runArgs": [
     "--init",
@@ -19,7 +22,7 @@
     "source=${localWorkspaceFolder},target=/workspace,type=bind",
     "source=pipcache,target=/root/.cache/pip,type=volume"
   ],
-  "postCreateCommand": "apt-get update && apt-get install -y git && python -m pip install --upgrade pip && pip install -r /workspace/requirements.txt && echo 'export LD_LIBRARY_PATH=$(find /usr/local/lib/python3.12/site-packages/nvidia -name \"lib\" -type d 2>/dev/null | tr \"\\n\" \":\" | sed \"s/:$//\"):$LD_LIBRARY_PATH' >> ~/.bashrc",
+  "postCreateCommand": "apt-get update && apt-get install -y git curl && python -m pip install --upgrade pip && pip install -r /workspace/requirements.txt && echo 'export LD_LIBRARY_PATH=$(find /usr/local/lib/python3.12/site-packages/nvidia -name \"lib\" -type d 2>/dev/null | tr \"\\n\" \":\" | sed \"s/:$//\"):$LD_LIBRARY_PATH' >> ~/.bashrc",
   "forwardPorts": [8000, 8888],
   "containerEnv": {
     "PYTHONDONTWRITEBYTECODE": "1",
