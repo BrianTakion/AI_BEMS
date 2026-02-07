@@ -5,12 +5,15 @@
 건물 에너지 데이터를 활용한 LightGBM 기반 전력 예측 모델 - 추론용
 """
 
-import os, sys
+import os, sys, time
 import numpy as np
 import pandas as pd
 import lightgbm as lgb
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import root_mean_squared_error
+import matplotlib
+matplotlib.use('Agg')  # Non-interactive backend
+import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import plotly.io as pio
 pio.renderers.default = 'browser'
@@ -27,14 +30,15 @@ import Data_PreProcessing_260207 as DP
 # 설정 (Configuration)
 # ============================================================
 # 데이터 소스 설정 (현재: CSV 파일, 추후: SQL query 등으로 변경 가능)
-file_path = os.path.join(script_dir, 'data_colec_h_202509091411_B0019.csv')
+parent_dir = os.path.dirname(script_dir)
+file_path = os.path.join(parent_dir, 'data_colec_h_202509091411_B0019.csv')
 devID, device_name = 2001, '학교MAIN'
 tag_dict = {30001: '현재 출력'}
 start_date = pd.to_datetime('2025-03-24 17:45:00')
 end_date   = pd.to_datetime('2025-09-09 14:05:00')
 
 # 모델 파일 경로
-model_file_path = os.path.join(script_dir, f"AI1-MainPower_Prediction_train_260207_{devID}_{device_name}.txt")
+model_file_path = os.path.join(script_dir, f"AI-MainPower_Prediction_train_260207_{devID}_{device_name}.txt")
 
 # ============================================================
 # 1. Data Loading
@@ -113,3 +117,5 @@ fig.update_layout(
     legend=dict(x=0.5, y=0.9, xanchor='center', yanchor='bottom', orientation='h')
 )
 fig.show()
+
+time.sleep(2)  # 브라우저가 plotly 그래프를 로드할 시간 확보
