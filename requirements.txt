@@ -6,8 +6,13 @@ numpy
 pandas
 matplotlib
 seaborn
+plotly
 scikit-learn
+lightgbm
 pyarrow
+holidays
+PyWavelets
+scipy
 
 # --- 웹(백엔드) ---
 fastapi
