@@ -167,7 +167,7 @@ def preprocess(raw_df, points=4, freqInterval='15min', only_cleansing=False, fil
 
     wavelet = 'db1'
     level = 3  # 분해 레벨
-    coeffs = pywt.wavedec(df_value1p, wavelet, level=level)
+    coeffs = pywt.wavedec(np.array(df_value1p, copy=True), wavelet, level=level)
     # 각 레벨별 특징 추출
     for i in range(level + 1):
         if i == 0:

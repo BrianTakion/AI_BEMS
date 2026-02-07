@@ -75,14 +75,14 @@ df_tCur_zero, _, _, _ = DP.preprocess(df_tCur_raw, points=4, freqInterval='15min
 zero_sequence_intervals = DP.find_zero_sequence_intervals(df_tCur_zero, min_zero_streak=4*1)
 
 # df_offON 선형 보간
-df_offON, df_offON_is_missing, df_offON_nan_counts_df, df_offON_missing_ratio = DP.preprocess(df_offON_raw, points=4, freqInterval='15min', only_cleansing=True, fill_method='time')
+df_offON, _, _, _ = DP.preprocess(df_offON_raw, points=4, freqInterval='15min', only_cleansing=True, fill_method='time')
 df_offON.loc[df_offON['value'] > 0, 'value'] = 1
 df_offON['value'] = df_offON['value'].mask((df_offON['value'] == 0) & (df_offON['value'].shift(-1) == 1), 1)
 df_offON['value'] = df_offON['value'].mask((df_offON['value'] == 0) & (df_offON['value'].shift(1) == 1), 1)
 
-df_coolHeat, df_coolHeat_is_missing, df_coolHeat_nan_counts_df, df_coolHeat_missing_ratio = DP.preprocess(df_coolHeat_raw, points=4, freqInterval='15min', only_cleansing=True, fill_method='time')
-df_tCur, df_tCur_is_missing, df_tCur_nan_counts_df, df_tCur_missing_ratio = DP.preprocess(df_tCur_raw, points=4, freqInterval='15min', only_cleansing=True, fill_method='time')
-df_tSet, df_tSet_is_missing, df_tSet_nan_counts_df, df_tSet_missing_ratio = DP.preprocess(df_tSet_raw, points=4, freqInterval='15min', only_cleansing=True, fill_method='time')
+df_coolHeat, _, _, _ = DP.preprocess(df_coolHeat_raw, points=4, freqInterval='15min', only_cleansing=True, fill_method='time')
+df_tCur, _, _, _ = DP.preprocess(df_tCur_raw, points=4, freqInterval='15min', only_cleansing=True, fill_method='time')
+df_tSet, _, _, _ = DP.preprocess(df_tSet_raw, points=4, freqInterval='15min', only_cleansing=True, fill_method='time')
 
 # df_offON_virtual 생성
 df_offON_virtual = DP.generate_df_offON_virtual(df_tCur, df_coolHeat, df_offON)

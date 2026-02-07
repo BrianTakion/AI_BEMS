@@ -12,6 +12,8 @@ import lightgbm as lgb
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import root_mean_squared_error
 import plotly.graph_objects as go
+import plotly.io as pio
+pio.renderers.default = 'browser'
 
 # 현재 스크립트가 있는 디렉토리를 Python 경로에 추가
 script_dir = os.path.dirname(os.path.abspath(__file__))

@@ -41,6 +41,10 @@ Thumbs.db
 models/
 *.model
 
+# Backup directories
+Backup/
+**/Backup/
+
 # Data directories (optional - uncomment if needed)
 # data/
 # DATA_*/
