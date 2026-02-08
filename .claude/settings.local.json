@@ -10,7 +10,22 @@
       "WebFetch(domain:www.remotion.dev)",
       "Bash(git config:*)",
       "Bash(git add:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(pip install:*)",
+      "Bash(apt-get update:*)",
+      "Bash(apt-get install:*)",
+      "WebFetch(domain:github.com)",
+      "mcp__plugin_serena_serena__list_dir",
+      "mcp__plugin_serena_serena__activate_project",
+      "mcp__plugin_serena_serena__check_onboarding_performed",
+      "mcp__plugin_serena_serena__search_for_pattern",
+      "mcp__plugin_serena_serena__read_file",
+      "mcp__plugin_serena_serena__think_about_task_adherence",
+      "mcp__plugin_serena_serena__replace_content",
+      "Bash(git remote set-url:*)",
+      "Bash(ls:*)"
     ]
   }
 }
