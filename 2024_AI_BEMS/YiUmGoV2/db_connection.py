@@ -133,7 +133,12 @@ def read_sensor_data(
 
     if mode == "db":
         table = config["data"]["collection_table"]  # DATA_COLEC_H
-        cutoff = datetime.now() - timedelta(hours=input_hours)
+        # Feature engineering requires up to 1-week lag (672 rows at 15-min
+        # sampling).  Fetch 10 days of history to guarantee enough data after
+        # lag/rolling features are computed and NaN rows are dropped.
+        sampling_min = config["data"]["sampling_minutes"]
+        lookback_hours = 10 * 24  # 10 days
+        cutoff = datetime.now() - timedelta(hours=lookback_hours)
         query = (
             f'SELECT "COLEC_DT" AS colec_dt, "COLEC_VAL" AS colec_val '
             f'FROM "{table}" '
@@ -150,7 +155,7 @@ def read_sensor_data(
         )
         df["colec_dt"] = pd.to_datetime(df["colec_dt"])
         df["colec_val"] = df["colec_val"].astype(float)
-        logger.info("DB: read %d rows for dev_id=%s tag_cd=%s", len(df), dev_id, tag_cd)
+        logger.info("DB: read %d rows for dev_id=%s tag_cd=%s (lookback=%dh)", len(df), dev_id, tag_cd, lookback_hours)
         return df
 
     # ------------------------------------------------------------------
@@ -162,7 +167,7 @@ def read_sensor_data(
     # The CSV is ~4.3 GB.  We read only the columns we need and filter
     # in chunks to avoid loading the entire file into memory.
     CHUNK_SIZE = 500_000
-    MAX_TAIL_ROWS = 1000  # enough rows for feature engineering (lags up to 1 week)
+    MAX_TAIL_ROWS = 5000  # ~52 days at 15-min sampling; feature engineering needs 1-week lags
 
     usecols = ["dev_id", "tag_cd", "colec_dt", "colec_val"]
     chunks: list[pd.DataFrame] = []
