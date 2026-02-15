@@ -1,0 +1,37 @@
+{
+  "data_source": "csv",
+  "csv": {
+    "data_path": "../YiUmGO/data_colec_h_250730_260212_B0019.csv",
+    "dev_map_path": "../YiUmGO/dev_m_202509151816_B0019.csv"
+  },
+  "db": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "bems",
+    "user": "ai_user",
+    "password": "changeme"
+  },
+  "data": {
+    "input_interval_hours": 4,
+    "sampling_minutes": 15,
+    "collection_table": "DATA_COLEC_H",
+    "tag_cd": 30001
+  },
+  "anomaly": {
+    "score_threshold": 50,
+    "model_dir": "models/anomaly",
+    "config_table": "DEV_USE_PURP_REL_R",
+    "result_table": "FALT_PRCV_FCST"
+  },
+  "model": {
+    "objective": "regression",
+    "metric": "rmse",
+    "boosting_type": "gbdt",
+    "num_leaves": 50,
+    "learning_rate": 0.1,
+    "num_boost_round": 1000,
+    "early_stopping_rounds": 30,
+    "test_size": 0.03,
+    "verbose": -1
+  }
+}
