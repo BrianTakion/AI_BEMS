@@ -250,7 +250,7 @@ def write_anomaly_result(
         )
         return
 
-    # CSV mode -- just log the result
+    # CSV mode -- write to result CSV file and also log
     status = "ANOMALY" if ad_score <= config["anomaly"]["score_threshold"] else "NORMAL"
     msg = (
         f"[{now:%Y-%m-%d %H:%M:%S}] "
@@ -260,3 +260,19 @@ def write_anomaly_result(
     )
     print(msg)
     logger.info("CSV mode (write_anomaly_result): %s", msg)
+
+    # Append to result CSV if path is configured
+    result_path = config["csv"].get("result_path")
+    if result_path:
+        abs_path = _resolve_path(result_path)
+        os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+        row = pd.DataFrame([{
+            "USE_DT": now.strftime("%Y-%m-%d %H:%M:%S"),
+            "BLDG_ID": bldg_id,
+            "DEV_ID": str(dev_id),
+            "AD_SCORE": round(ad_score, 2),
+            "AD_DESC": ad_desc,
+        }])
+        write_header = not os.path.isfile(abs_path)
+        row.to_csv(abs_path, mode="a", header=write_header, index=False)
+        logger.info("CSV mode: result appended to %s", abs_path)
