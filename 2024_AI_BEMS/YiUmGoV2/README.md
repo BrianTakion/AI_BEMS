@@ -30,6 +30,20 @@ Training and inference both use identical **176h (7d+8h) windows** through `prep
 
 This guarantees identical feature engineering (lags, rolling stats, etc.) between training and inference.
 
+## E2E Test (CSV-only, no DB required)
+
+```bash
+python run_e2e_test.py
+```
+
+Automatically processes **all** devices from `enabled_devices.csv` where `FALT_PRCV_YN='Y'`:
+
+1. **Train** models for each enabled device (skips if `models/anomaly/{dev_id}.txt` already exists)
+2. **Infer** — runs `ai_anomaly_runner.py` once (processes all enabled devices)
+3. **Validate** — checks `anomaly_results.csv` for every enabled device (AD_SCORE, AD_DESC, USE_DT)
+
+Prints PASS/FAIL summary at the end. Exits with code 0 on success, 1 on failure.
+
 ## Cron Deployment (hourly)
 
 ```
@@ -61,6 +75,7 @@ YiUmGoV2/
 ├── infer_anomaly.py          # Inference, AD_SCORE, AD_DESC
 ├── train_anomaly.py          # Model training CLI (CSV-only, random window sampling)
 ├── utility.py                # Device name lookup helpers
+├── run_e2e_test.py           # E2E test (CSV-only, no DB)
 ├── test_integration.py       # End-to-end pipeline test
 ├── _config.json              # All configuration
 ├── requirements.txt          # Python dependencies
