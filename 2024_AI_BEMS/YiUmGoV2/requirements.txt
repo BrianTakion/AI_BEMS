@@ -8,3 +8,4 @@ scipy>=1.11
 PyWavelets>=1.4
 holidays>=0.34
 plotly>=5.15
+pytest>=7.0
