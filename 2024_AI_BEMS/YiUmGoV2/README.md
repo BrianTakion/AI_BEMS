@@ -8,9 +8,8 @@ Reads sensor data from PostgreSQL (production) or CSV files (development), engin
 ```bash
 pip install -r requirements.txt
 
-# Train models (skips devices that already have a model)
-python train_anomaly.py --dev_id 2001
-python train_anomaly.py --dev_id 2001 2002 2003
+# Train models for enabled devices (reads config_anomaly_devices.csv, skips existing)
+python train_anomaly.py --csv
 
 # Run inference (CSV mode, writes to output/)
 python ai_anomaly_runner.py --csv
