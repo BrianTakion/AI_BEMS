@@ -90,8 +90,8 @@ All settings in `_config.json`:
 |-----|---------|-------------|
 | `data_source` | `"csv"` | `"csv"` (development) or `"db"` (production) |
 | `csv.data_path` | | Path to sensor data CSV |
-| `csv.enabled_devices_path` | | Path to enabled devices CSV |
-| `csv.result_path` | | Path for CSV output results |
+| `csv.config_anomaly_devices_path` | | Path to enabled devices CSV |
+| `csv.anomaly_results_path` | | Path for CSV output results |
 | `db.host/port/database/user/password` | | PostgreSQL connection settings |
 | `data.fetch_window_hours` | `176` | Data window size for training and inference |
 | `data.scoring_window_hours` | `2` | Window for AD_SCORE calculation |

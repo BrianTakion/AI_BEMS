@@ -98,7 +98,7 @@ def read_enabled_devices(source, config: dict) -> list[dict]:
         return devices
 
     # CSV mode -- read from enabled_devices CSV file
-    csv_path = config["csv"].get("enabled_devices_path")
+    csv_path = config["csv"].get("config_anomaly_devices_path")
     if csv_path:
         abs_path = _resolve_path(csv_path)
         if os.path.isfile(abs_path):
@@ -262,7 +262,7 @@ def write_anomaly_result(
     logger.info("CSV mode (write_anomaly_result): %s", msg)
 
     # Append to result CSV if path is configured
-    result_path = config["csv"].get("result_path")
+    result_path = config["csv"].get("anomaly_results_path")
     if result_path:
         abs_path = _resolve_path(result_path)
         os.makedirs(os.path.dirname(abs_path), exist_ok=True)

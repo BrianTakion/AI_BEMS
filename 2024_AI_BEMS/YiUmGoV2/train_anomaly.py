@@ -126,7 +126,7 @@ def main():
     # Read enabled devices from CSV
     # ==================================================================
     devices_path = os.path.normpath(
-        os.path.join(SCRIPT_DIR, config["csv"]["enabled_devices_path"])
+        os.path.join(SCRIPT_DIR, config["csv"]["config_anomaly_devices_path"])
     )
     devices_df = pd.read_csv(
         devices_path, dtype={"BLDG_ID": str, "DEV_ID": int, "FALT_PRCV_YN": str}
