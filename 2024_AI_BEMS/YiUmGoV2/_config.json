@@ -1,7 +1,7 @@
 {
   "data_source": "csv",
   "csv": {
-    "data_path": "/workspace/2024_AI_BEMS/YiUmGoV2/dataset/data_colec_h_250730_260212_B0019.csv",
+    "data_path": "/workspace/2024_AI_BEMS/YiUmGoV2/dataset/data_colec_h_250730_260212_B0019.csv"
   },
   "db": {
     "host": "localhost",
@@ -12,10 +12,14 @@
   },
   "data": {
     "fetch_window_hours": 176,
-    "scoring_window_hours": 4,
+    "scoring_window_hours": 2,
     "sampling_minutes": 15,
     "collection_table": "DATA_COLEC_H",
     "tag_cd": 30001
+  },
+  "training": {
+    "max_steps": 1000,
+    "samples_per_window": 8
   },
   "anomaly": {
     "score_threshold": 50,
