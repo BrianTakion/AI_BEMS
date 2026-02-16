@@ -80,11 +80,11 @@ def process_device(source, config, bldg_id, dev_id, dry_run=False):
         logger.warning("Insufficient data for dev_id=%s (%d rows) -- skipping", dev_id, len(raw_df))
         return None
 
-    # 5. Build df_raw: index=colec_dt, columns=['value']
-    df_raw = raw_df.set_index("colec_dt")[["colec_val"]].rename(columns={"colec_val": "value"})
+    # 5. Build window_df: index=colec_dt, columns=['value']
+    window_df = raw_df.set_index("colec_dt")[["colec_val"]].rename(columns={"colec_val": "value"})
 
     # 6. Preprocess
-    result = data_preprocessing.preprocess(df_raw, config, fill_method="ffill")
+    result = data_preprocessing.preprocess(window_df, config, fill_method="ffill")
     X_df, y_df, nan_counts_df, missing_ratio = result
 
     # 7. Skip if X_df is empty after preprocessing
