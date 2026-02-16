@@ -7,8 +7,8 @@ Designed to be executed hourly via cron.
 Flow: read config -> get enabled devices -> fetch data -> preprocess -> infer -> write results
 
 Usage:
-    python ai_anomaly_runner.py             # normal run (writes results)
-    python ai_anomaly_runner.py --dry-run   # dry-run (logs only, no DB write)
+    python ai_anomaly_runner.py          # DB mode (production, writes to DB)
+    python ai_anomaly_runner.py --csv    # CSV mode (development, writes to output/)
 """
 
 import argparse
@@ -47,7 +47,7 @@ def load_config():
     return config
 
 
-def process_device(source, config, bldg_id, dev_id, dry_run=False):
+def process_device(source, config, bldg_id, dev_id):
     """Process a single device: load model, fetch data, preprocess, infer, write result.
 
     Args:
@@ -55,7 +55,6 @@ def process_device(source, config, bldg_id, dev_id, dry_run=False):
         config: Configuration dict from _config.json.
         bldg_id: Building identifier string.
         dev_id: Device identifier (int).
-        dry_run: If True, skip writing results to DB.
 
     Returns:
         Tuple (ad_score, ad_desc) on success, or None on skip/error.
@@ -117,11 +116,8 @@ def process_device(source, config, bldg_id, dev_id, dry_run=False):
         dev_id, ad_score, status, len(y_actual_window), len(y_actual), scoring_hours, ad_desc,
     )
 
-    # 11. Write result (unless dry-run)
-    if dry_run:
-        logger.info("(dry-run, not written) bldg_id=%s, dev_id=%s, ad_score=%.2f", bldg_id, dev_id, ad_score)
-    else:
-        db_connection.write_anomaly_result(source, config, bldg_id, dev_id, ad_score, ad_desc)
+    # 11. Write result (DB mode writes to DB, CSV mode writes to output file)
+    db_connection.write_anomaly_result(source, config, bldg_id, dev_id, ad_score, ad_desc)
 
     return (ad_score, ad_desc)
 
@@ -131,9 +127,9 @@ def main():
     # 1. Parse CLI args
     parser = argparse.ArgumentParser(description="AI BEMS Anomaly Detection Runner")
     parser.add_argument(
-        "--dry-run",
+        "--csv",
         action="store_true",
-        help="Run without writing results to DB (just logs)",
+        help="Run in CSV mode (read from CSV files, write results to output/)",
     )
     args = parser.parse_args()
 
@@ -142,10 +138,11 @@ def main():
     setup_logging()
     config = load_config()
 
-    # 4. Log start
+    # 4. Override data_source based on CLI flag
+    config["data_source"] = "csv" if args.csv else "db"
+
     logger.info("=== AI Anomaly Detection Start ===")
-    if args.dry_run:
-        logger.info("Mode: DRY-RUN (results will NOT be written)")
+    logger.info("Mode: %s", config["data_source"].upper())
 
     start_time = time.time()
 
@@ -168,7 +165,7 @@ def main():
         logger.info("Processing: bldg_id=%s, dev_id=%s", bldg_id, dev_id)
 
         try:
-            result = process_device(source, config, bldg_id, dev_id, dry_run=args.dry_run)
+            result = process_device(source, config, bldg_id, dev_id)
             if result is not None:
                 success_count += 1
         except Exception:
