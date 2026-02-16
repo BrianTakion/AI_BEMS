@@ -11,14 +11,11 @@ data_preprocessing.preprocess() and the last `samples_per_window` rows
 are collected.  A LightGBM regression model is trained on the pooled
 samples and saved to models/anomaly/{dev_id}.txt.
 
-Supports multiple device IDs. Skips training when a model already exists.
+Reads enabled devices from config_anomaly_devices.csv (FALT_PRCV_YN='Y').
+Skips training when a model already exists.
 
-Usage examples:
-    # Train a single device
-    python train_anomaly.py --dev_id 2001
-
-    # Train multiple devices (skips if model already exists)
-    python train_anomaly.py --dev_id 2001 2002 2003
+Usage:
+    python train_anomaly.py --csv
 """
 
 import os
@@ -96,12 +93,10 @@ def main():
         description="Train LightGBM anomaly detection models"
     )
     parser.add_argument(
-        "--dev_id", type=int, nargs="+", required=True,
-        help="Device ID(s) to train for (e.g. 2001 2002 2003)"
-    )
-    parser.add_argument(
-        "--csv_path", type=str, default=None,
-        help="CSV data file path. Overrides csv.data_path in config."
+        "--csv",
+        action="store_true",
+        required=True,
+        help="Read enabled devices from config_anomaly_devices.csv and train each",
     )
     args = parser.parse_args()
 
@@ -122,16 +117,30 @@ def main():
     model_dir = os.path.join(SCRIPT_DIR, config["anomaly"]["model_dir"])
     os.makedirs(model_dir, exist_ok=True)
 
-    csv_path = args.csv_path or config["csv"]["data_path"]
+    csv_path = config["csv"]["data_path"]
     csv_abs = os.path.normpath(os.path.join(SCRIPT_DIR, csv_path))
     if not os.path.isfile(csv_abs):
-        # Try as-is (absolute path)
         csv_abs = csv_path
+
+    # ==================================================================
+    # Read enabled devices from CSV
+    # ==================================================================
+    devices_path = os.path.normpath(
+        os.path.join(SCRIPT_DIR, config["csv"]["enabled_devices_path"])
+    )
+    devices_df = pd.read_csv(
+        devices_path, dtype={"BLDG_ID": str, "DEV_ID": int, "FALT_PRCV_YN": str}
+    )
+    enabled = devices_df[devices_df["FALT_PRCV_YN"] == "Y"]
+    dev_ids = enabled["DEV_ID"].tolist()
+
+    print(f"[TRAIN] Enabled devices ({len(dev_ids)}): {dev_ids}")
+    print(f"[TRAIN] Devices CSV: {devices_path}")
 
     # ==================================================================
     # Device loop
     # ==================================================================
-    for dev_id in args.dev_id:
+    for dev_id in dev_ids:
         model_path = os.path.join(model_dir, f"{dev_id}.txt")
 
         # Skip if model already exists
