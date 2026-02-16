@@ -108,17 +108,17 @@ def test_full_pipeline():
     y_pred = infer_anomaly.run_inference(model, X_df)
     print(f"  Predictions count: {len(y_pred)}")
 
-    # 4h. Slice last 4-hour window for scoring
+    # 4h. Slice last scoring window
     sampling_min = config["data"]["sampling_minutes"]
     input_hours = config["data"]["input_interval_hours"]
-    window_size = (60 // sampling_min) * input_hours  # e.g., 4 * 4 = 16
-    y_actual_4h = y_df.values[-window_size:]
-    y_pred_4h = y_pred[-window_size:]
-    print(f"  4h window: last {len(y_actual_4h)} of {len(y_pred)} samples")
+    window_size = (60 // sampling_min) * input_hours
+    y_actual_window = y_df.values[-window_size:]
+    y_pred_window = y_pred[-window_size:]
+    print(f"  Scoring window ({input_hours}h): last {len(y_actual_window)} of {len(y_pred)} samples")
 
-    # 4i. Compute ad_score and ad_desc on 4h window
-    ad_score = infer_anomaly.compute_ad_score(y_actual_4h, y_pred_4h, config)
-    ad_desc = infer_anomaly.generate_ad_desc(y_actual_4h, y_pred_4h, ad_score, config)
+    # 4i. Compute ad_score and ad_desc on scoring window
+    ad_score = infer_anomaly.compute_ad_score(y_actual_window, y_pred_window, config)
+    ad_desc = infer_anomaly.generate_ad_desc(y_actual_window, y_pred_window, ad_score, config)
 
     # 4j. Print AD_SCORE and AD_DESC
     print(f"\n  AD_SCORE: {ad_score:.2f}")

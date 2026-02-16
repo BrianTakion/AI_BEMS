@@ -97,24 +97,24 @@ def process_device(source, config, bldg_id, dev_id, dry_run=False):
     y_predicted = infer_anomaly.run_inference(model, X_df)
     y_actual = y_df.values
 
-    # 9. Slice the last 4-hour window for scoring (feature engineering uses
+    # 9. Slice the last scoring window for AD (feature engineering uses
     #    a larger historical window, but AD_SCORE reflects only the most
     #    recent input_interval_hours).
     sampling_min = config["data"]["sampling_minutes"]
     input_hours = config["data"]["input_interval_hours"]
-    window_size = (60 // sampling_min) * input_hours  # e.g., 4 * 4 = 16
-    y_actual_4h = y_actual[-window_size:]
-    y_predicted_4h = y_predicted[-window_size:]
+    window_size = (60 // sampling_min) * input_hours
+    y_actual_window = y_actual[-window_size:]
+    y_predicted_window = y_predicted[-window_size:]
 
-    # 10. Compute anomaly score and description on the 4-hour window
-    ad_score = infer_anomaly.compute_ad_score(y_actual_4h, y_predicted_4h, config)
-    ad_desc = infer_anomaly.generate_ad_desc(y_actual_4h, y_predicted_4h, ad_score, config)
+    # 10. Compute anomaly score and description on the scoring window
+    ad_score = infer_anomaly.compute_ad_score(y_actual_window, y_predicted_window, config)
+    ad_desc = infer_anomaly.generate_ad_desc(y_actual_window, y_predicted_window, ad_score, config)
 
     threshold = config["anomaly"]["score_threshold"]
     status = "ANOMALY" if ad_score <= threshold else "NORMAL"
     logger.info(
-        "dev_id=%s => AD_SCORE=%.2f (%s) [%d/%d samples in 4h window] | %s",
-        dev_id, ad_score, status, len(y_actual_4h), len(y_actual), ad_desc,
+        "dev_id=%s => AD_SCORE=%.2f (%s) [%d/%d samples in %dh window] | %s",
+        dev_id, ad_score, status, len(y_actual_window), len(y_actual), input_hours, ad_desc,
     )
 
     # 11. Write result (unless dry-run)

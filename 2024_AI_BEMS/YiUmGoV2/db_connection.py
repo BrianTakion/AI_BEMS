@@ -129,15 +129,17 @@ def read_sensor_data(
     """
     mode = config.get("data_source", "csv")
     tag_cd = config["data"]["tag_cd"]  # 30001
-    input_hours = config["data"]["input_interval_hours"]  # 4
+    input_hours = config["data"]["input_interval_hours"]
 
     if mode == "db":
         table = config["data"]["collection_table"]  # DATA_COLEC_H
         # Feature engineering requires up to 1-week lag (672 rows at 15-min
-        # sampling).  Fetch 10 days of history to guarantee enough data after
-        # lag/rolling features are computed and NaN rows are dropped.
+        # sampling).  Fetch input_interval_hours + 8 days of history to
+        # guarantee enough data after lag/rolling features are computed
+        # and NaN rows are dropped.
         sampling_min = config["data"]["sampling_minutes"]
-        lookback_hours = 10 * 24  # 10 days
+        feature_overhead_hours = 8 * 24  # 8 days for 1-week lag + safety margin
+        lookback_hours = input_hours + feature_overhead_hours
         cutoff = datetime.now() - timedelta(hours=lookback_hours)
         query = (
             f'SELECT "COLEC_DT" AS colec_dt, "COLEC_VAL" AS colec_val '

@@ -12,7 +12,7 @@
     "password": "changeme"
   },
   "data": {
-    "input_interval_hours": 4,
+    "input_interval_hours": 168,
     "sampling_minutes": 15,
     "collection_table": "DATA_COLEC_H",
     "tag_cd": 30001
