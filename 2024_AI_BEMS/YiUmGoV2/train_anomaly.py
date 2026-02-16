@@ -183,8 +183,9 @@ def main():
               f"Need data spanning at least {fetch_hours}h.")
         sys.exit(1)
 
-    min_ts = min_end.timestamp()
-    max_ts = max_end.timestamp()
+    # Use nanosecond arithmetic to avoid timezone-sensitive timestamp() round-trip
+    min_end_ns = min_end.value
+    max_end_ns = max_end.value
 
     np.random.seed(42)
 
@@ -196,9 +197,9 @@ def main():
     print(f"[TRAIN] Sampling {max_steps} random {fetch_hours}h windows ...")
 
     for step in range(max_steps):
-        # Pick a random end_time within the valid range
-        rand_ts = np.random.uniform(min_ts, max_ts)
-        end_time = pd.Timestamp.fromtimestamp(rand_ts)
+        # Pick a random end_time within the valid range (tz-free nanosecond arithmetic)
+        rand_ns = np.random.uniform(min_end_ns, max_end_ns)
+        end_time = pd.Timestamp(int(rand_ns))
         start_time = end_time - window_td
 
         # Slice the window from the full dataset
@@ -216,7 +217,7 @@ def main():
             )
         except Exception as exc:
             windows_skipped += 1
-            if (step + 1) % 100 == 0:
+            if windows_skipped == 1 or (step + 1) % 100 == 0:
                 print(f"  [WARN] Step {step + 1}: preprocess failed ({exc})")
             continue
 

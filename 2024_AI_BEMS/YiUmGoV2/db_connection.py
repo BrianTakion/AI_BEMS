@@ -118,8 +118,8 @@ def read_sensor_data(
 
     - DB mode:  queries DATA_COLEC_H for the last N hours (N from config).
     - CSV mode: reads the CSV file with minimal columns, filters by dev_id
-                and tag_cd, then takes the last 1000 rows (enough for feature
-                engineering with 1-week lags at 15-min sampling).
+                and tag_cd, then takes the last fetch_window_hours of data
+                by time (consistent with DB mode).
 
     Returns
     -------

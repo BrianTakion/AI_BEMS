@@ -8,8 +8,11 @@ Reads sensor data, runs inference, and writes anomaly scores (AD_SCORE 0-100) to
 ```bash
 pip install -r requirements.txt
 
-# Train a model for device 2001
+# Train a model for device 2001 (CSV-only, random 176h window sampling)
 python train_anomaly.py --dev_id 2001
+
+# Train with explicit date range
+python train_anomaly.py --dev_id 2001 --start_date 2025-03-24 --end_date 2025-09-09
 
 # Run inference (dry-run, no DB write)
 python ai_anomaly_runner.py --dry-run
@@ -17,6 +20,15 @@ python ai_anomaly_runner.py --dry-run
 # Run inference (production, writes to DB)
 python ai_anomaly_runner.py
 ```
+
+## Training / Inference Consistency
+
+Training and inference both use identical **176h (7d+8h) windows** through `preprocess(window_df, config)`:
+
+- **Training**: Randomly samples 176h windows from historical CSV data. Each window produces the last 8 samples (2h scoring window). Controlled by `training.max_steps` in config.
+- **Inference**: Fetches the most recent 176h of data (time-based filtering for both CSV and DB modes), preprocesses, and scores the last 2h window.
+
+This guarantees identical feature engineering (lags, rolling stats, etc.) between training and inference.
 
 ## Cron Deployment (hourly)
 
@@ -31,9 +43,11 @@ All settings in `_config.json`:
 | Key | Description |
 |-----|-------------|
 | `data_source` | `"csv"` (dev) or `"db"` (production) |
-| `data.fetch_window_hours` | DB data lookback window (default: 176h, 7d+8h) |
-| `data.scoring_window_hours` | Anomaly scoring window (default: 4h) |
+| `data.fetch_window_hours` | Data window size for both training and inference (default: 176h) |
+| `data.scoring_window_hours` | Anomaly scoring window (default: 2h) |
 | `data.sampling_minutes` | Sampling interval (default: 15min) |
+| `training.max_steps` | Number of random windows to sample during training (default: 1000) |
+| `training.samples_per_window` | Samples taken from each window (default: 8, matching 2h) |
 | `anomaly.score_threshold` | Anomaly threshold (default: 50, lower = anomaly) |
 | `model.*` | LightGBM hyperparameters |
 
@@ -43,9 +57,9 @@ All settings in `_config.json`:
 YiUmGoV2/
 ├── ai_anomaly_runner.py      # Main entry point (cron)
 ├── db_connection.py          # CSV/DB dual-mode data access
-├── data_preprocessing.py     # 60+ time-series features
+├── data_preprocessing.py     # 44 time-series features
 ├── infer_anomaly.py          # Inference, AD_SCORE, AD_DESC
-├── train_anomaly.py          # Model training CLI
+├── train_anomaly.py          # Model training CLI (CSV-only, random window sampling)
 ├── utility.py                # Device name lookup helpers
 ├── test_integration.py       # End-to-end pipeline test
 ├── _config.json              # All configuration
