@@ -12,10 +12,10 @@ pip install -r requirements.txt
 python train_anomaly.py --dev_id 2001
 python train_anomaly.py --dev_id 2001 2002 2003
 
-# Run inference (dry-run, no DB write)
-python ai_anomaly_runner.py --dry-run
+# Run inference (CSV mode, writes to output/)
+python ai_anomaly_runner.py --csv
 
-# Run inference (production, writes to DB)
+# Run inference (DB mode, production)
 python ai_anomaly_runner.py
 
 # Run tests
