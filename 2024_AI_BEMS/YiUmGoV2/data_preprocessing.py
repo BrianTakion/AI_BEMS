@@ -38,7 +38,6 @@ def preprocess(window_df, config, only_cleansing=False, fill_method='zero'):
 
     # 예측모델일 때는 과거데이터만으로 현재 regression, 회귀모델일 때는 현재데이터로 regression
     df_value1p = df['value'].shift(1)  # Shifted values to use past data only
-    # df_value1p = df['value']
 
     # 2. 시간 기반 피쳐 생성 (대한민국의 주말 및 공휴일 특징 반영)
     features_dict = {}
@@ -78,7 +77,6 @@ def preprocess(window_df, config, only_cleansing=False, fill_method='zero'):
     features_dict['cos_hour'] = np.cos(2 * np.pi * features_dict['hour'] / 24)
 
     # 4. 시간 지연 피쳐 생성
-    ##############
     for lag in [1, 2, 3]:  # 15min delayed pattern
         features_dict[f'lag_{lag}p'] = df['value'].shift(lag)
     for lag in [0]:  # 1일 = 4p_ x 24h/p_ 지연 패턴

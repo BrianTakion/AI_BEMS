@@ -1,6 +1,5 @@
 import os
 import numpy as np
-import pandas as pd
 import lightgbm as lgb
 from sklearn.metrics import root_mean_squared_error
 
@@ -65,15 +64,14 @@ def compute_ad_score(y_actual, y_predicted, config):
     else:
         score = max(0.0, 100.0 - (rmse / mean_actual) * 100.0)
 
-    return float(score)
+    return round(float(score), 2)
 
 
 def generate_ad_desc(y_actual, y_predicted, ad_score, config):
     """Generate a statistical summary text description for anomaly detection.
 
-    Includes mean, std, min, max of actual values, RMSE, trend direction
-    (comparing first half vs second half of actual values), and an anomaly
-    alert if the score is at or below the configured threshold.
+    Includes status (normal/anomalous), window label, AD_SCORE, RMSE,
+    mean, std, min, max of actual values.
 
     Args:
         y_actual: Array-like of actual observed values.
@@ -94,38 +92,23 @@ def generate_ad_desc(y_actual, y_predicted, ad_score, config):
     min_val = np.min(y_actual)
     max_val = np.max(y_actual)
 
-    # Trend direction: compare mean of first half vs second half
-    mid = len(y_actual) // 2
-    if mid > 0:
-        first_half_mean = np.mean(y_actual[:mid])
-        second_half_mean = np.mean(y_actual[mid:])
-        if second_half_mean > first_half_mean + 1e-8:
-            trend = "INCREASING"
-        elif second_half_mean < first_half_mean - 1e-8:
-            trend = "DECREASING"
-        else:
-            trend = "STABLE"
-    else:
-        trend = "STABLE"
-
     scoring_hours = config["data"]["scoring_window_hours"]
     if scoring_hours >= 24:
-        window_label = f"{scoring_hours // 24}D Stats"
+        window_label = f"{scoring_hours // 24}D 평균"
     else:
-        window_label = f"{scoring_hours}H Stats"
-
-    desc = (
-        f"{window_label} | "
-        f"Mean: {mean_val:.2f}, Std: {std_val:.2f}, "
-        f"Min: {min_val:.2f}, Max: {max_val:.2f} | "
-        f"RMSE: {rmse:.2f} | "
-        f"AD_SCORE: {ad_score:.1f} | "
-        f"Trend: {trend}"
-    )
+        window_label = f"{scoring_hours}H 평균"
 
     threshold = config['anomaly']['score_threshold']
-    if ad_score <= threshold:
-        desc += " | ANOMALY DETECTED"
+    if ad_score > threshold:
+        desc = " 정상 상태 | "
+    else: 
+        desc = " 이상 상태 | "
+    desc += (
+        f"{window_label} | "
+        f"정상지수: {ad_score:.1f} | "
+        f"RMSE: {rmse:.1f} | "
+        f"평균: {mean_val:.1f}, 표준편차: {std_val:.1f}, 최대: {max_val:.1f}, 최소: {min_val:.1f}"
+    )
 
     # Truncate to 1000 characters (VARCHAR(1000) in DB)
     if len(desc) > 1000:
