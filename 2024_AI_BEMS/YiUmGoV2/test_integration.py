@@ -69,18 +69,18 @@ def test_full_pipeline():
         print("SKIP: No sensor data returned for dev_id=2001")
         return
 
-    # 4c. Build df_raw: index=colec_dt, columns=['value']
-    df_raw = df_sensor[["colec_dt", "colec_val"]].copy()
-    df_raw = df_raw.rename(columns={"colec_val": "value"})
-    df_raw = df_raw.set_index("colec_dt")
-    df_raw.index.name = None
-    print(f"  df_raw shape: {df_raw.shape}")
+    # 4c. Build window_df: index=colec_dt, columns=['value']
+    window_df = df_sensor[["colec_dt", "colec_val"]].copy()
+    window_df = window_df.rename(columns={"colec_val": "value"})
+    window_df = window_df.set_index("colec_dt")
+    window_df.index.name = None
+    print(f"  window_df shape: {window_df.shape}")
 
     # 4d. Preprocess
     import data_preprocessing
 
     X_df, y_df, nan_counts, missing_ratio = data_preprocessing.preprocess(
-        df_raw, config, fill_method="ffill"
+        window_df, config, fill_method="ffill"
     )
 
     # 4e. Print feature count, sample count
