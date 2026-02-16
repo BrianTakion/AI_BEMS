@@ -8,11 +8,9 @@ Reads sensor data from PostgreSQL (production) or CSV files (development), engin
 ```bash
 pip install -r requirements.txt
 
-# Train a model for device 2001 (CSV-only, random 176h window sampling)
+# Train models (skips devices that already have a model)
 python train_anomaly.py --dev_id 2001
-
-# Train with explicit date range
-python train_anomaly.py --dev_id 2001 --start_date 2025-03-24 --end_date 2025-09-09
+python train_anomaly.py --dev_id 2001 2002 2003
 
 # Run inference (dry-run, no DB write)
 python ai_anomaly_runner.py --dry-run
@@ -39,7 +37,7 @@ python -m pytest tests/ -v
          ┌──────────────┴──────────────┐
          │                             │
   ai_anomaly_runner.py          train_anomaly.py
-  (hourly cron inference)       (manual model training)
+  (hourly cron inference)       (multi-device model training)
          │                             │
          └──────────────┬──────────────┘
                         │
@@ -110,7 +108,7 @@ All settings in `_config.json`:
 ```
 YiUmGoV2/
 ├── ai_anomaly_runner.py         # Main entry point (cron hourly)
-├── train_anomaly.py             # Model training CLI (random window sampling)
+├── train_anomaly.py             # Model training CLI (multi-device, random window sampling)
 ├── data_preprocessing.py        # 44 time-series features
 ├── infer_anomaly.py             # Inference, AD_SCORE, AD_DESC
 ├── db_connection.py             # CSV/DB dual-mode data access
