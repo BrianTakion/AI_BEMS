@@ -42,6 +42,9 @@ Thumbs.db
 models/
 *.model
 
+# Output directories
+output/
+
 # Backup directories
 Backup/
 **/Backup/
