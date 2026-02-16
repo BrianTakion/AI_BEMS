@@ -110,11 +110,11 @@ def test_full_pipeline():
 
     # 4h. Slice last scoring window
     sampling_min = config["data"]["sampling_minutes"]
-    input_hours = config["data"]["input_interval_hours"]
-    window_size = (60 // sampling_min) * input_hours
+    scoring_hours = config["data"]["scoring_window_hours"]
+    window_size = (60 // sampling_min) * scoring_hours
     y_actual_window = y_df.values[-window_size:]
     y_pred_window = y_pred[-window_size:]
-    print(f"  Scoring window ({input_hours}h): last {len(y_actual_window)} of {len(y_pred)} samples")
+    print(f"  Scoring window ({scoring_hours}h): last {len(y_actual_window)} of {len(y_pred)} samples")
 
     # 4i. Compute ad_score and ad_desc on scoring window
     ad_score = infer_anomaly.compute_ad_score(y_actual_window, y_pred_window, config)

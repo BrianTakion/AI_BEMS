@@ -129,18 +129,12 @@ def read_sensor_data(
     """
     mode = config.get("data_source", "csv")
     tag_cd = config["data"]["tag_cd"]  # 30001
-    input_hours = config["data"]["input_interval_hours"]
+    fetch_hours = config["data"]["fetch_window_hours"]
 
     if mode == "db":
         table = config["data"]["collection_table"]  # DATA_COLEC_H
-        # Feature engineering requires up to 1-week lag (672 rows at 15-min
-        # sampling).  Fetch input_interval_hours + 8 days of history to
-        # guarantee enough data after lag/rolling features are computed
-        # and NaN rows are dropped.
-        sampling_min = config["data"]["sampling_minutes"]
-        feature_overhead_hours = 8 * 24  # 8 days for 1-week lag + safety margin
-        lookback_hours = input_hours + feature_overhead_hours
-        cutoff = datetime.now() - timedelta(hours=lookback_hours)
+        # Fetch exactly fetch_window_hours of data from DB.
+        cutoff = datetime.now() - timedelta(hours=fetch_hours)
         query = (
             f'SELECT "COLEC_DT" AS colec_dt, "COLEC_VAL" AS colec_val '
             f'FROM "{table}" '
@@ -157,7 +151,7 @@ def read_sensor_data(
         )
         df["colec_dt"] = pd.to_datetime(df["colec_dt"])
         df["colec_val"] = df["colec_val"].astype(float)
-        logger.info("DB: read %d rows for dev_id=%s tag_cd=%s (lookback=%dh)", len(df), dev_id, tag_cd, lookback_hours)
+        logger.info("DB: read %d rows for dev_id=%s tag_cd=%s (lookback=%dh)", len(df), dev_id, tag_cd, fetch_hours)
         return df
 
     # ------------------------------------------------------------------
@@ -169,7 +163,8 @@ def read_sensor_data(
     # The CSV is ~4.3 GB.  We read only the columns we need and filter
     # in chunks to avoid loading the entire file into memory.
     CHUNK_SIZE = 500_000
-    MAX_TAIL_ROWS = 5000  # ~52 days at 15-min sampling; feature engineering needs 1-week lags
+    sampling_min = config["data"]["sampling_minutes"]
+    max_tail_rows = (60 // sampling_min) * fetch_hours  # DB 모드와 동일한 fetch_window_hours 적용
 
     usecols = ["dev_id", "tag_cd", "colec_dt", "colec_val"]
     chunks: list[pd.DataFrame] = []
@@ -195,11 +190,11 @@ def read_sensor_data(
     df["colec_dt"] = pd.to_datetime(df["colec_dt"]).dt.floor("min")
     df = df.sort_values("colec_dt").reset_index(drop=True)
 
-    # Keep only the tail -- last MAX_TAIL_ROWS rows
-    df = df.tail(MAX_TAIL_ROWS).reset_index(drop=True)
+    # Keep only the tail -- DB 모드와 동일하게 fetch_window_hours 기반으로 제한
+    df = df.tail(max_tail_rows).reset_index(drop=True)
     df = df[["colec_dt", "colec_val"]]
 
-    logger.info("CSV: returning %d rows (last %d) for dev_id=%s", len(df), MAX_TAIL_ROWS, dev_id)
+    logger.info("CSV: returning %d rows (last %d, %dh window) for dev_id=%s", len(df), max_tail_rows, fetch_hours, dev_id)
     return df
 
 

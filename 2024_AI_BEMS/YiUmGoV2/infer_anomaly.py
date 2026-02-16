@@ -108,11 +108,11 @@ def generate_ad_desc(y_actual, y_predicted, ad_score, config):
     else:
         trend = "STABLE"
 
-    input_hours = config["data"]["input_interval_hours"]
-    if input_hours >= 24:
-        window_label = f"{input_hours // 24}D Stats"
+    scoring_hours = config["data"]["scoring_window_hours"]
+    if scoring_hours >= 24:
+        window_label = f"{scoring_hours // 24}D Stats"
     else:
-        window_label = f"{input_hours}H Stats"
+        window_label = f"{scoring_hours}H Stats"
 
     desc = (
         f"{window_label} | "

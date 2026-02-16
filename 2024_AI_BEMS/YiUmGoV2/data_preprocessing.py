@@ -118,8 +118,8 @@ def preprocess(raw_df, config, only_cleansing=False, fill_method='zero'):
         features_dict[f'max_{window}h'] = df_value1p.rolling(window=p_ * window).max()
         features_dict[f'min_{window}h'] = df_value1p.rolling(window=p_ * window).min()
         features_dict[f'std_{window}h'] = df_value1p.rolling(window=p_ * window).std()
-        features_dict[f'skew_{window}h'] = df_value1p.rolling(window=p_ * window).skew()
-        features_dict[f'kurt_{window}h'] = df_value1p.rolling(window=p_ * window).kurt()
+        #features_dict[f'skew_{window}h'] = df_value1p.rolling(window=p_ * window).skew()
+        #features_dict[f'kurt_{window}h'] = df_value1p.rolling(window=p_ * window).kurt()
 
     window_sizes = [1]  # 일 윈도우 통계
     for window in window_sizes:
@@ -127,70 +127,80 @@ def preprocess(raw_df, config, only_cleansing=False, fill_method='zero'):
         features_dict[f'max_{window}d'] = df_value1p.rolling(window=p_ * 24 * window).max()
         features_dict[f'min_{window}d'] = df_value1p.rolling(window=p_ * 24 * window).min()
         features_dict[f'std_{window}d'] = df_value1p.rolling(window=p_ * 24 * window).std()
-        features_dict[f'skew_{window}d'] = df_value1p.rolling(window=p_ * 24 * window).skew()
-        features_dict[f'kurt_{window}d'] = df_value1p.rolling(window=p_ * 24 * window).kurt()
+        #features_dict[f'skew_{window}d'] = df_value1p.rolling(window=p_ * 24 * window).skew()
+        #features_dict[f'kurt_{window}d'] = df_value1p.rolling(window=p_ * 24 * window).kurt()
 
-    features_dict['p1d_ma_1d'] = df['value'].shift(p_ * 24).rolling(window=p_).mean()  # 1일전 동시간대 1시간 통계
-    features_dict['p1d_max_1d'] = df['value'].shift(p_ * 24).rolling(window=p_).max()
-    features_dict['p1d_min_1d'] = df['value'].shift(p_ * 24).rolling(window=p_).min()
-    features_dict['p1d_std_1d'] = df['value'].shift(p_ * 24).rolling(window=p_).std()
-    features_dict['p1d_skew_1d'] = df['value'].shift(p_ * 24).rolling(window=p_).skew()
-    features_dict['p1d_kurt_1d'] = df['value'].shift(p_ * 24).rolling(window=p_).kurt()
+    cw = 2 * (p_ // 2) + 1  # ±30분 중심 대칭 윈도우 (15분간격 기준 5포인트: -30m, -15m, 0, +15m, +30m)
 
-    features_dict['p1w_ma_1d'] = df['value'].shift(p_ * 24 * 7).rolling(window=p_).mean()  # 1주일전 동시간대 1시간 통계
-    features_dict['p1w_max_1d'] = df['value'].shift(p_ * 24 * 7).rolling(window=p_).max()
-    features_dict['p1w_min_1d'] = df['value'].shift(p_ * 24 * 7).rolling(window=p_).min()
-    features_dict['p1w_std_1d'] = df['value'].shift(p_ * 24 * 7).rolling(window=p_).std()
-    features_dict['p1w_skew_1d'] = df['value'].shift(p_ * 24 * 7).rolling(window=p_).skew()
-    features_dict['p1w_kurt_1d'] = df['value'].shift(p_ * 24 * 7).rolling(window=p_).kurt()
+    features_dict['p1d_ma_1h'] = df['value'].shift(p_ * 24).rolling(window=cw, center=True).mean()  # 1일전 동시간대 ±30분 통계
+    features_dict['p1d_max_1h'] = df['value'].shift(p_ * 24).rolling(window=cw, center=True).max()
+    features_dict['p1d_min_1h'] = df['value'].shift(p_ * 24).rolling(window=cw, center=True).min()
+    features_dict['p1d_std_1h'] = df['value'].shift(p_ * 24).rolling(window=cw, center=True).std()
+    #features_dict['p1d_skew_1h'] = df['value'].shift(p_ * 24).rolling(window=cw, center=True).skew()
+    #features_dict['p1d_kurt_1h'] = df['value'].shift(p_ * 24).rolling(window=cw, center=True).kurt()
+
+    features_dict['p1w_ma_1h'] = df['value'].shift(p_ * 24 * 7).rolling(window=cw, center=True).mean()  # 1주일전 동시간대 ±30분 통계
+    features_dict['p1w_max_1h'] = df['value'].shift(p_ * 24 * 7).rolling(window=cw, center=True).max()
+    features_dict['p1w_min_1h'] = df['value'].shift(p_ * 24 * 7).rolling(window=cw, center=True).min()
+    features_dict['p1w_std_1h'] = df['value'].shift(p_ * 24 * 7).rolling(window=cw, center=True).std()
+    #features_dict['p1w_skew_1h'] = df['value'].shift(p_ * 24 * 7).rolling(window=cw, center=True).skew()
+    #features_dict['p1w_kurt_1h'] = df['value'].shift(p_ * 24 * 7).rolling(window=cw, center=True).kurt()
 
     # 7. 이동 평균의 변화율 특징 생성
     shifted = features_dict['ma_1h']
     features_dict['rate_ma_1h'] = shifted.diff() / deltaT
     features_dict['rate_rate_ma_1h'] = features_dict['rate_ma_1h'].diff() / deltaT
 
-    shifted = features_dict['p1d_ma_1d']
-    features_dict['rate_p1d_ma_1d'] = shifted.diff() / deltaT
-    features_dict['rate_rate_p1d_ma_1d'] = features_dict['rate_p1d_ma_1d'].diff() / deltaT
+    shifted = features_dict['p1d_ma_1h']
+    features_dict['rate_p1d_ma_1h'] = shifted.diff() / deltaT
+    features_dict['rate_rate_p1d_ma_1h'] = features_dict['rate_p1d_ma_1h'].diff() / deltaT
 
-    shifted = features_dict['p1w_ma_1d']
-    features_dict['rate_p1w_ma_1d'] = shifted.diff() / deltaT
-    features_dict['rate_rate_p1w_ma_1d'] = features_dict['rate_p1w_ma_1d'].diff() / deltaT
+    shifted = features_dict['p1w_ma_1h']
+    features_dict['rate_p1w_ma_1h'] = shifted.diff() / deltaT
+    features_dict['rate_rate_p1w_ma_1h'] = features_dict['rate_p1w_ma_1h'].diff() / deltaT
 
-    # 8. 추세 및 계절성 분포
-    features_dict['trend'] = np.arange(len(df))
+    # 8. 계절성 분포
     features_dict['season_ma_1h'] = df_value1p - features_dict['ma_1h']
     features_dict['season_ma_1d'] = df_value1p - features_dict['ma_1d']
 
-    # 9. Fourier Transform, wavelet 특징 생성
-    """fft_features = fft(df_value1p.fillna(0).values)
-    features_dict['fft_real'] = np.real(fft_features)  # 실수 부분
-    features_dict['fft_imag'] = np.imag(fft_features)  # 허수 부분"""
+    # 9. Wavelet 특징 생성 (고정 4시간 rolling window로 학습/추론 일관성 보장)
+    #wavelet = 'db1'
+    #level = 3  # 분해 레벨
+    #w_wavelet = p_ * 4  # 4시간 윈도우 (15분 간격 기준 16포인트)
 
-    wavelet = 'db1'
-    level = 3  # 분해 레벨
-    coeffs = pywt.wavedec(np.array(df_value1p, copy=True), wavelet, level=level)
-    # 각 레벨별 특징 추출
-    for i in range(level + 1):
-        if i == 0:
-            # Approximation coefficients
-            features_dict[f'wavelet_approx'] = np.interp(np.linspace(0, len(coeffs[i]) - 1, len(df_value1p)), np.arange(len(coeffs[i])), coeffs[i])
-        else:
-            # Detail coefficients
-            features_dict[f'wavelet_detail_{i}'] = np.interp(np.linspace(0, len(coeffs[i]) - 1, len(df_value1p)), np.arange(len(coeffs[i])), coeffs[i])
+    #wavelet_approx = np.full(len(df_value1p), np.nan)
+    #wavelet_details = [np.full(len(df_value1p), np.nan) for _ in range(level)]
+
+    #arr_wav = np.nan_to_num(df_value1p.values, nan=0.0)
+    #for idx in range(w_wavelet - 1, len(arr_wav)):
+    #    segment = arr_wav[idx - w_wavelet + 1:idx + 1]
+    #    coeffs = pywt.wavedec(segment, wavelet, level=level)
+    #    wavelet_approx[idx] = coeffs[0][-1]  # approximation 마지막 계수
+    #    for lv in range(level):
+    #        wavelet_details[lv][idx] = coeffs[lv + 1][-1]  # detail 마지막 계수
+
+    #features_dict['wavelet_approx'] = wavelet_approx
+    #for lv in range(level):
+    #    features_dict[f'wavelet_detail_{lv + 1}'] = wavelet_details[lv]
 
     # 10. 지수 이동 평균 (Exponential Moving Average)
     ###features_dict['ema_1d'] = df_value1p.ewm(span=p_ * 24, adjust=False).mean()  # 이전 1일 지수 이동 평균
 
     # 11. 누적 합계 및 변화율
-    features_dict['cum_sum'] = df_value1p.cumsum()  # 누적 합계
-    features_dict['rate_cum_sum'] = features_dict['cum_sum'].diff() / deltaT  # 누적 합계의 증감율
-    features_dict['rate_rate_cum_sum'] = features_dict['rate_cum_sum'].diff() / deltaT  # 누적 합계의 증감율
+    #features_dict['cum_sum'] = df_value1p.cumsum()  # 누적 합계
+    #features_dict['rate_cum_sum'] = features_dict['cum_sum'].diff() / deltaT  # 누적 합계의 증감율
+    #features_dict['rate_rate_cum_sum'] = features_dict['rate_cum_sum'].diff() / deltaT  # 누적 합계의 증감율
 
-    # 12.이벤트 탐지
-    peaks, _ = find_peaks(df_value1p)
-    features_dict['is_peak'] = np.zeros(len(df_value1p), dtype=int)  # 모든 값을 0으로 초기화
-    features_dict['is_peak'][peaks] = 1  # 피크 지점에 플래그 추가
+    # 12. 이벤트 탐지 (고정 4시간 rolling window로 학습/추론 일관성 보장)
+    #w_peak = p_ * 4  # 4시간 윈도우
+    #is_peak_arr = np.zeros(len(df_value1p), dtype=int)
+    #arr_peak = df_value1p.values
+    #for idx in range(w_peak - 1, len(arr_peak)):
+    #    segment = arr_peak[idx - w_peak + 1:idx + 1]
+    #    seg_peaks, _ = find_peaks(segment)
+    #    for pk in seg_peaks:
+    #        is_peak_arr[idx - w_peak + 1 + pk] = 1
+    #features_dict['is_peak'] = is_peak_arr
 
     """features_dict['z_score'] = stats.zscore(df_value1p, nan_policy='omit')  # z-score 계산"""
 

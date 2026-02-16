@@ -99,10 +99,10 @@ def process_device(source, config, bldg_id, dev_id, dry_run=False):
 
     # 9. Slice the last scoring window for AD (feature engineering uses
     #    a larger historical window, but AD_SCORE reflects only the most
-    #    recent input_interval_hours).
+    #    recent scoring_window_hours).
     sampling_min = config["data"]["sampling_minutes"]
-    input_hours = config["data"]["input_interval_hours"]
-    window_size = (60 // sampling_min) * input_hours
+    scoring_hours = config["data"]["scoring_window_hours"]
+    window_size = (60 // sampling_min) * scoring_hours
     y_actual_window = y_actual[-window_size:]
     y_predicted_window = y_predicted[-window_size:]
 
@@ -114,7 +114,7 @@ def process_device(source, config, bldg_id, dev_id, dry_run=False):
     status = "ANOMALY" if ad_score <= threshold else "NORMAL"
     logger.info(
         "dev_id=%s => AD_SCORE=%.2f (%s) [%d/%d samples in %dh window] | %s",
-        dev_id, ad_score, status, len(y_actual_window), len(y_actual), input_hours, ad_desc,
+        dev_id, ad_score, status, len(y_actual_window), len(y_actual), scoring_hours, ad_desc,
     )
 
     # 11. Write result (unless dry-run)

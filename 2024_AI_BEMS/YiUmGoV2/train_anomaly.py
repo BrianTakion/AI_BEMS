@@ -226,7 +226,7 @@ def main():
     # ------------------------------------------------------------------
     # 4. Feature engineering via data_preprocessing
     # ------------------------------------------------------------------
-    X_df, y_df, nan_counts_df, missing_ratio = DP.preprocess(df_raw, config)
+    X_df, y_df, nan_counts_df, missing_ratio = DP.preprocess(df_raw, config, fill_method="ffill")
     print(f"[TRAIN] Features: {X_df.shape[1]},  Samples: {len(X_df)}")
     print(f"[TRAIN] NaN counts max: {nan_counts_df.max()},  Missing ratio: {missing_ratio}")
 

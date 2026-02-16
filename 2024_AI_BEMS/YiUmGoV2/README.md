@@ -31,7 +31,8 @@ All settings in `_config.json`:
 | Key | Description |
 |-----|-------------|
 | `data_source` | `"csv"` (dev) or `"db"` (production) |
-| `data.input_interval_hours` | Scoring window (default: 4h) |
+| `data.fetch_window_hours` | DB data lookback window (default: 176h, 7d+8h) |
+| `data.scoring_window_hours` | Anomaly scoring window (default: 4h) |
 | `data.sampling_minutes` | Sampling interval (default: 15min) |
 | `anomaly.score_threshold` | Anomaly threshold (default: 50, lower = anomaly) |
 | `model.*` | LightGBM hyperparameters |
