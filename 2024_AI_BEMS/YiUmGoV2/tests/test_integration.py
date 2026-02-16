@@ -13,7 +13,7 @@ import os
 import pandas as pd
 import pytest
 
-import db_connection as DB
+import data_source as DS
 import data_preprocessing
 import infer_anomaly
 
@@ -25,17 +25,17 @@ SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def data_source(config):
-    return DB.create_data_source(config)
+def source(config):
+    return DS.create_data_source(config)
 
 
 @pytest.fixture
-def devices(data_source, config):
-    return DB.read_enabled_devices(data_source, config)
+def devices(source, config):
+    return DS.read_enabled_devices(source, config)
 
 
 @pytest.fixture
-def sensor_data(data_source, config):
+def sensor_data(source, config):
     """Load sensor data for dev_id=2001. Skip if CSV file is missing."""
     csv_path = os.path.normpath(
         os.path.join(SCRIPT_DIR, config["csv"]["data_path"])
@@ -43,7 +43,7 @@ def sensor_data(data_source, config):
     if not os.path.isfile(csv_path):
         pytest.skip(f"CSV data file not found: {csv_path}")
 
-    df = DB.read_sensor_data(data_source, config, bldg_id="B0019", dev_id=2001)
+    df = DS.read_sensor_data(source, config, bldg_id="B0019", dev_id=2001)
     if df.empty:
         pytest.skip("No sensor data returned for dev_id=2001")
     return df
@@ -115,8 +115,8 @@ class TestConfigLoading:
 
 
 class TestDataSource:
-    def test_create_data_source(self, data_source):
-        assert data_source is not None
+    def test_create_data_source(self, source):
+        assert source is not None
 
     def test_enabled_devices_not_empty(self, devices):
         assert len(devices) > 0

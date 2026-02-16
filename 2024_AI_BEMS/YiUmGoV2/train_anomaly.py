@@ -4,9 +4,9 @@
 train_anomaly.py
 LightGBM-based anomaly detection model -- training script.
 
-Loads ALL historical sensor data from CSV, then samples random 176-hour
-windows (controlled by training.max_steps in _config.json) to build a
-diverse training set.  Each window is preprocessed via
+Loads ALL historical sensor data via data_source, then samples random
+176-hour windows (controlled by training.max_steps in _config.json) to
+build a diverse training set.  Each window is preprocessed via
 data_preprocessing.preprocess() and the last `samples_per_window` rows
 are collected.  A LightGBM regression model is trained on the pooled
 samples and saved to models/anomaly/{dev_id}.txt.
@@ -38,49 +38,7 @@ if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
 import data_preprocessing as DP
-
-
-# ===================================================================
-# CSV helpers
-# ===================================================================
-
-def _load_csv_chunked(csv_path, dev_id, tag_cd):
-    """Read a large CSV in chunks, filtering by dev_id and tag_cd.
-
-    Returns a DataFrame with columns ['colec_dt', 'colec_val'], sorted by colec_dt.
-    """
-    CHUNK_SIZE = 500_000
-    usecols = ["dev_id", "tag_cd", "colec_dt", "colec_val"]
-    chunks = []
-
-    print(f"[DATA] Reading CSV: {csv_path}")
-    print(f"[DATA] Filtering dev_id={dev_id}, tag_cd={tag_cd}")
-
-    for chunk in pd.read_csv(
-        csv_path,
-        usecols=usecols,
-        dtype={"dev_id": str, "tag_cd": str, "colec_val": float},
-        parse_dates=["colec_dt"],
-        chunksize=CHUNK_SIZE,
-    ):
-        mask = (chunk["dev_id"] == str(dev_id)) & (chunk["tag_cd"] == str(tag_cd))
-        filtered = chunk.loc[mask]
-        if not filtered.empty:
-            chunks.append(filtered)
-
-    if not chunks:
-        raise ValueError(
-            f"No data found in CSV for dev_id={dev_id}, tag_cd={tag_cd}"
-        )
-
-    df = pd.concat(chunks, ignore_index=True)
-    df["colec_dt"] = pd.to_datetime(df["colec_dt"]).dt.floor("min")
-    df = df.sort_values("colec_dt").reset_index(drop=True)
-
-    df = df[["colec_dt", "colec_val"]].reset_index(drop=True)
-    print(f"[DATA] Loaded {len(df)} rows  "
-          f"({df['colec_dt'].iloc[0]} ~ {df['colec_dt'].iloc[-1]})")
-    return df
+import data_source as DS
 
 
 # ===================================================================
@@ -106,6 +64,8 @@ def main():
     with open(config_path, "r") as f:
         config = json.load(f)
 
+    config["data_source"] = "csv"
+
     tag_cd = config["data"]["tag_cd"]  # 30001
     model_cfg = config["model"]
     fetch_hours = config["data"]["fetch_window_hours"]  # 176
@@ -116,30 +76,20 @@ def main():
     model_dir = os.path.join(SCRIPT_DIR, config["anomaly"]["model_dir"])
     os.makedirs(model_dir, exist_ok=True)
 
-    csv_path = config["csv"]["data_path"]
-    csv_abs = os.path.normpath(os.path.join(SCRIPT_DIR, csv_path))
-    if not os.path.isfile(csv_abs):
-        csv_abs = csv_path
-
     # ==================================================================
-    # Read enabled devices from CSV
+    # Read enabled devices via data_source
     # ==================================================================
-    devices_path = os.path.normpath(
-        os.path.join(SCRIPT_DIR, config["csv"]["config_anomaly_devices_path"])
-    )
-    devices_df = pd.read_csv(
-        devices_path, dtype={"BLDG_ID": str, "DEV_ID": int, "FALT_PRCV_YN": str}
-    )
-    enabled = devices_df[devices_df["FALT_PRCV_YN"] == "Y"]
-    dev_ids = enabled["DEV_ID"].tolist()
+    source = DS.create_data_source(config)
+    devices = DS.read_enabled_devices(source, config)
 
-    print(f"[TRAIN] Enabled devices ({len(dev_ids)}): {dev_ids}")
-    print(f"[TRAIN] Devices CSV: {devices_path}")
+    print(f"[TRAIN] Enabled devices ({len(devices)}): {[d['dev_id'] for d in devices]}")
 
     # ==================================================================
     # Device loop
     # ==================================================================
-    for dev_id in dev_ids:
+    for device in devices:
+        bldg_id = device["bldg_id"]
+        dev_id = device["dev_id"]
         model_path = os.path.join(model_dir, f"{dev_id}.txt")
 
         # Skip if model already exists
@@ -156,14 +106,14 @@ def main():
         print("=" * 60)
 
         # --------------------------------------------------------------
-        # 2. Load ALL historical CSV data
+        # 2. Load ALL historical sensor data via data_source
         # --------------------------------------------------------------
         t0 = time.time()
 
-        try:
-            df_sensor = _load_csv_chunked(csv_abs, dev_id, tag_cd)
-        except ValueError as exc:
-            print(f"[ERROR] {exc}")
+        df_sensor = DS.read_sensor_data(source, config, bldg_id, dev_id, fetch_hours=0)
+
+        if df_sensor.empty:
+            print(f"[ERROR] No data found for dev_id={dev_id}")
             continue
 
         load_time = time.time() - t0

@@ -17,7 +17,7 @@ import logging
 import os
 import time
 
-import db_connection
+import data_source
 import data_preprocessing
 import infer_anomaly
 
@@ -72,7 +72,7 @@ def process_device(source, config, bldg_id, dev_id):
     logger.info("Model loaded: %s", model_path)
 
     # 3. Read sensor data
-    raw_df = db_connection.read_sensor_data(source, config, bldg_id, dev_id)
+    raw_df = data_source.read_sensor_data(source, config, bldg_id, dev_id)
 
     # 4. Check if data is sufficient (at least 2 rows)
     if len(raw_df) < 2:
@@ -117,7 +117,7 @@ def process_device(source, config, bldg_id, dev_id):
     )
 
     # 11. Write result (DB mode writes to DB, CSV mode writes to output file)
-    db_connection.write_anomaly_result(source, config, bldg_id, dev_id, ad_score, ad_desc)
+    data_source.write_anomaly_result(source, config, bldg_id, dev_id, ad_score, ad_desc)
 
     return (ad_score, ad_desc)
 
@@ -147,10 +147,10 @@ def main():
     start_time = time.time()
 
     # 5. Create data source
-    source = db_connection.create_data_source(config)
+    source = data_source.create_data_source(config)
 
     # 6. Get enabled devices
-    devices = db_connection.read_enabled_devices(source, config)
+    devices = data_source.read_enabled_devices(source, config)
 
     # 7. Log number of enabled devices
     logger.info("Enabled devices: %d", len(devices))

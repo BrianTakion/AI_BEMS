@@ -30,7 +30,7 @@ python -m pytest tests/ -v
 └────────────┬─────────────┘     └────────────┬─────────────┘
              └──────────┬─────────────────────┘
                         │
-                   db_connection.py
+                   data_source.py
             (dual-mode data access layer)
                         │
          ┌──────────────┴──────────────┐
@@ -55,10 +55,10 @@ python -m pytest tests/ -v
 | File | Description |
 |------|-------------|
 | `ai_anomaly_runner.py` | Main entry point (hourly cron). Loops over enabled devices, loads models, fetches data, preprocesses, infers, and writes results. |
-| `train_anomaly.py` | Training CLI (`--csv` required). Reads all historical sensor data via chunked CSV, samples random 176h windows, trains one LightGBM model per device. Skips if model already exists. |
+| `train_anomaly.py` | Training CLI (`--csv` required). Loads all historical sensor data via `data_source`, samples random 176h windows, trains one LightGBM model per device. Skips if model already exists. |
 | `data_preprocessing.py` | Feature engineering. Transforms a raw 176h sensor window into 44 features (temporal, seasonal, lag, rolling stats, rates, decomposition). |
 | `infer_anomaly.py` | Inference utilities. Loads a LightGBM Booster, runs predictions, computes AD_SCORE (0-100), and generates a Korean-language AD_DESC. |
-| `db_connection.py` | Dual-mode data access layer. Abstracts CSV vs PostgreSQL for reading devices, sensor data, and writing anomaly results. |
+| `data_source.py` | Dual-mode data access layer. Abstracts CSV vs PostgreSQL for reading devices, sensor data, and writing anomaly results. Supports `fetch_hours=0` (all history for training) and `fetch_hours=None` (config default for inference). |
 
 ### CSV Mode (`--csv`)
 
@@ -155,7 +155,7 @@ YiUmGoV2/
 ├── train_anomaly.py             # Model training CLI (multi-device, random window sampling)
 ├── data_preprocessing.py        # 44 time-series features
 ├── infer_anomaly.py             # Inference, AD_SCORE, AD_DESC
-├── db_connection.py             # CSV/DB dual-mode data access
+├── data_source.py               # CSV/DB dual-mode data access
 ├── _config.json                 # All configuration
 ├── requirements.txt             # Python dependencies
 ├── pytest.ini                   # Pytest configuration

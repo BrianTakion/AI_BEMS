@@ -1,16 +1,17 @@
 """
-db_connection.py
+data_source.py
 Abstraction layer for data access in both CSV (dev) and PostgreSQL DB (production) modes.
 
 Usage:
     import json
     with open('_config.json') as f:
         config = json.load(f)
-    import db_connection as DB
-    source = DB.create_data_source(config)
-    devices = DB.read_enabled_devices(source, config)
-    df = DB.read_sensor_data(source, config, bldg_id='B0019', dev_id=2001)
-    DB.write_anomaly_result(source, config, 'B0019', 2001, 85.3, 'Normal operation')
+    import data_source as DS
+    source = DS.create_data_source(config)
+    devices = DS.read_enabled_devices(source, config)
+    df = DS.read_sensor_data(source, config, bldg_id='B0019', dev_id=2001)
+    df_all = DS.read_sensor_data(source, config, 'B0019', 2001, fetch_hours=0)  # all history
+    DS.write_anomaly_result(source, config, 'B0019', 2001, 85.3, 'Normal operation')
 """
 
 import os
@@ -123,15 +124,22 @@ def read_sensor_data(
     config: dict,
     bldg_id: str,
     dev_id: int,
+    fetch_hours: int | None = None,
 ) -> pd.DataFrame:
     """
     Read sensor collection data for a single device and return a DataFrame
     with columns ['colec_dt', 'colec_val'].
 
-    - DB mode:  queries DATA_COLEC_H for the last N hours (N from config).
+    - DB mode:  queries DATA_COLEC_H with a time-based cutoff.
     - CSV mode: reads the CSV file with minimal columns, filters by dev_id
-                and tag_cd, then takes the last fetch_window_hours of data
-                by time (consistent with DB mode).
+                and tag_cd, then applies the same time-based cutoff.
+
+    Parameters
+    ----------
+    fetch_hours : int or None
+        Number of hours of history to return.
+        None  -> use config["data"]["fetch_window_hours"] (default, for inference).
+        0     -> return all available data (for training).
 
     Returns
     -------
@@ -141,29 +149,38 @@ def read_sensor_data(
     """
     mode = config.get("data_source", "csv")
     tag_cd = config["data"]["tag_cd"]  # 30001
-    fetch_hours = config["data"]["fetch_window_hours"]
+    if fetch_hours is None:
+        fetch_hours = config["data"]["fetch_window_hours"]
 
     if mode == "db":
         table = config["data"]["collection_table"]  # DATA_COLEC_H
-        # Fetch exactly fetch_window_hours of data from DB.
-        cutoff = datetime.now() - timedelta(hours=fetch_hours)
-        query = (
-            f'SELECT "COLEC_DT" AS colec_dt, "COLEC_VAL" AS colec_val '
-            f'FROM "{table}" '
-            f"WHERE \"BLDG_ID\" = %(bldg_id)s "
-            f"  AND \"DEV_ID\" = %(dev_id)s "
-            f"  AND \"TAG_CD\" = %(tag_cd)s "
-            f"  AND \"COLEC_DT\" >= %(cutoff)s "
-            f'ORDER BY "COLEC_DT" ASC'
-        )
-        df = pd.read_sql(
-            query,
-            source,
-            params={"bldg_id": bldg_id, "dev_id": str(dev_id), "tag_cd": str(tag_cd), "cutoff": cutoff},
-        )
+        if fetch_hours > 0:
+            cutoff = datetime.now() - timedelta(hours=fetch_hours)
+            query = (
+                f'SELECT "COLEC_DT" AS colec_dt, "COLEC_VAL" AS colec_val '
+                f'FROM "{table}" '
+                f"WHERE \"BLDG_ID\" = %(bldg_id)s "
+                f"  AND \"DEV_ID\" = %(dev_id)s "
+                f"  AND \"TAG_CD\" = %(tag_cd)s "
+                f"  AND \"COLEC_DT\" >= %(cutoff)s "
+                f'ORDER BY "COLEC_DT" ASC'
+            )
+            params = {"bldg_id": bldg_id, "dev_id": str(dev_id), "tag_cd": str(tag_cd), "cutoff": cutoff}
+        else:
+            query = (
+                f'SELECT "COLEC_DT" AS colec_dt, "COLEC_VAL" AS colec_val '
+                f'FROM "{table}" '
+                f"WHERE \"BLDG_ID\" = %(bldg_id)s "
+                f"  AND \"DEV_ID\" = %(dev_id)s "
+                f"  AND \"TAG_CD\" = %(tag_cd)s "
+                f'ORDER BY "COLEC_DT" ASC'
+            )
+            params = {"bldg_id": bldg_id, "dev_id": str(dev_id), "tag_cd": str(tag_cd)}
+        df = pd.read_sql(query, source, params=params)
         df["colec_dt"] = pd.to_datetime(df["colec_dt"])
         df["colec_val"] = df["colec_val"].astype(float)
-        logger.info("DB: read %d rows for dev_id=%s tag_cd=%s (lookback=%dh)", len(df), dev_id, tag_cd, fetch_hours)
+        label = f"{fetch_hours}h" if fetch_hours > 0 else "all"
+        logger.info("DB: read %d rows for dev_id=%s tag_cd=%s (lookback=%s)", len(df), dev_id, tag_cd, label)
         return df
 
     # ------------------------------------------------------------------
@@ -186,7 +203,6 @@ def read_sensor_data(
         parse_dates=["colec_dt"],
         chunksize=CHUNK_SIZE,
     ):
-        # dev_id and tag_cd are quoted strings in the CSV (e.g. "2001").
         mask = (chunk["dev_id"] == str(dev_id)) & (chunk["tag_cd"] == str(tag_cd))
         filtered = chunk.loc[mask]
         if not filtered.empty:
@@ -200,12 +216,15 @@ def read_sensor_data(
     df["colec_dt"] = pd.to_datetime(df["colec_dt"]).dt.floor("min")
     df = df.sort_values("colec_dt").reset_index(drop=True)
 
-    # Keep only the last fetch_window_hours by TIME (consistent with DB mode cutoff)
-    cutoff = df["colec_dt"].iloc[-1] - timedelta(hours=fetch_hours)
-    df = df[df["colec_dt"] >= cutoff].reset_index(drop=True)
+    # Apply time cutoff (skip when fetch_hours=0 to return all data for training)
+    if fetch_hours > 0:
+        cutoff = df["colec_dt"].iloc[-1] - timedelta(hours=fetch_hours)
+        df = df[df["colec_dt"] >= cutoff].reset_index(drop=True)
+
     df = df[["colec_dt", "colec_val"]]
 
-    logger.info("CSV: returning %d rows (%dh window) for dev_id=%s", len(df), fetch_hours, dev_id)
+    label = f"{fetch_hours}h" if fetch_hours > 0 else "all"
+    logger.info("CSV: returning %d rows (%s) for dev_id=%s", len(df), label, dev_id)
     return df
 
 
