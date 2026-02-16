@@ -97,7 +97,19 @@ def read_enabled_devices(source, config: dict) -> list[dict]:
         logger.info("DB: %d devices with FALT_PRCV_YN='Y'", len(devices))
         return devices
 
-    # CSV mode -- hardcoded test devices
+    # CSV mode -- read from enabled_devices CSV file
+    csv_path = config["csv"].get("enabled_devices_path")
+    if csv_path:
+        abs_path = _resolve_path(csv_path)
+        if os.path.isfile(abs_path):
+            df = pd.read_csv(abs_path, dtype={"BLDG_ID": str, "DEV_ID": int, "FALT_PRCV_YN": str})
+            df = df[df["FALT_PRCV_YN"] == "Y"]
+            devices = [{"bldg_id": row["BLDG_ID"], "dev_id": row["DEV_ID"]} for _, row in df.iterrows()]
+            logger.info("CSV mode: read %d enabled devices from %s", len(devices), abs_path)
+            return devices
+        logger.warning("CSV mode: enabled_devices file not found: %s, using fallback", abs_path)
+
+    # Fallback: hardcoded test devices (backwards compat)
     devices = [{"bldg_id": "B0019", "dev_id": 2001}]
     logger.info("CSV mode: returning hardcoded device list (%d devices)", len(devices))
     return devices
