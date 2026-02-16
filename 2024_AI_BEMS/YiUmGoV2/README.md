@@ -111,8 +111,6 @@ YiUmGoV2/
 ├── data_preprocessing.py        # 44 time-series features
 ├── infer_anomaly.py             # Inference, AD_SCORE, AD_DESC
 ├── db_connection.py             # CSV/DB dual-mode data access
-├── utility.py                   # Device name lookup helpers
-├── test_integration.py          # Standalone E2E pipeline test
 ├── _config.json                 # All configuration
 ├── requirements.txt             # Python dependencies
 ├── pytest.ini                   # Pytest configuration
@@ -154,9 +152,6 @@ python -m pytest tests/test_data_preprocessing.py -v
 
 # Integration tests (full pipeline, CSV mode)
 python -m pytest tests/test_integration.py -v
-
-# Standalone E2E test
-python test_integration.py
 
 # All tests
 python -m pytest tests/ -v

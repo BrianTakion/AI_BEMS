@@ -2,12 +2,7 @@ import pandas as pd
 import numpy as np
 import re
 import holidays
-from pandas.tseries.offsets import CustomBusinessDay
 import datetime
-from scipy.fftpack import fft
-import pywt
-from scipy.signal import find_peaks
-from scipy import stats
 
 def preprocess(window_df, config, only_cleansing=False, fill_method='zero'):
     points = 60 // config['data']['sampling_minutes']  # e.g., 60/15 = 4
@@ -24,9 +19,6 @@ def preprocess(window_df, config, only_cleansing=False, fill_method='zero'):
     df = df[~df.index.duplicated(keep='first')]  # 중복된 시간 포인트는 제거
     df = df.resample(freq).asfreq()  # freq 단위로 인덱스 리샘플링, asfreq()로 빈 시간대는 NaN으로 채움
 
-    # 음수 값은 0으로 보정
-    #df['value'] = df['value'].clip(lower=0)
-
     df['is_missing'] = df['value'].isna().astype(int)
     if fill_method == 'zero':
         df.fillna(0, inplace=True)  # 결측치는 0으로 채움
@@ -40,10 +32,7 @@ def preprocess(window_df, config, only_cleansing=False, fill_method='zero'):
     if only_cleansing:
         df_interpol = df[['value']].copy()
         df_is_missing = df[['is_missing']].copy()
-        nan_counts_df = df.isna().sum()  # 각 열마다 NaN의 갯수 출력
-        #for idx, item in enumerate(nan_counts_df):
-        #    print(f"{df.columns[idx]= }, NaN Count: {item}")
-
+        nan_counts_df = df.isna().sum()
         missing_ratio = round(df['is_missing'].sum() / len(df), 1)
         return df_interpol, df_is_missing, nan_counts_df, missing_ratio
 
@@ -55,15 +44,10 @@ def preprocess(window_df, config, only_cleansing=False, fill_method='zero'):
     features_dict = {}
 
     kr_holidays = holidays.KR()
-    #kr_business_day = CustomBusinessDay(holidays=kr_holidays)
     features_dict['hour'] = df.index.hour
-    ###features_dict['day'] = df.index.day
     features_dict['month'] = df.index.month
-    ###features_dict['quarter'] = df.index.quarter
     features_dict['weekday'] = df.index.weekday
-    ####features_dict['is_weekend'] = df['weekday'].isin([5, 6]).astype(int)  # 주말 여부
     features_dict['is_holiday'] = pd.Series(0, index=df.index)
-    #df.index.isin(kr_holidays).astype(int)  # 대한민국 공휴일 여부
 
     # 2. 명절 연휴 처리(설날, 추석은 전일과 후일이 연휴임)
     major_holiday_dates = pd.to_datetime([date for date in kr_holidays if kr_holidays[date] in ['설날', '추석']])
@@ -118,8 +102,6 @@ def preprocess(window_df, config, only_cleansing=False, fill_method='zero'):
         features_dict[f'max_{window}h'] = df_value1p.rolling(window=p_ * window).max()
         features_dict[f'min_{window}h'] = df_value1p.rolling(window=p_ * window).min()
         features_dict[f'std_{window}h'] = df_value1p.rolling(window=p_ * window).std()
-        #features_dict[f'skew_{window}h'] = df_value1p.rolling(window=p_ * window).skew()
-        #features_dict[f'kurt_{window}h'] = df_value1p.rolling(window=p_ * window).kurt()
 
     window_sizes = [1]  # 일 윈도우 통계
     for window in window_sizes:
@@ -127,8 +109,6 @@ def preprocess(window_df, config, only_cleansing=False, fill_method='zero'):
         features_dict[f'max_{window}d'] = df_value1p.rolling(window=p_ * 24 * window).max()
         features_dict[f'min_{window}d'] = df_value1p.rolling(window=p_ * 24 * window).min()
         features_dict[f'std_{window}d'] = df_value1p.rolling(window=p_ * 24 * window).std()
-        #features_dict[f'skew_{window}d'] = df_value1p.rolling(window=p_ * 24 * window).skew()
-        #features_dict[f'kurt_{window}d'] = df_value1p.rolling(window=p_ * 24 * window).kurt()
 
     cw = 2 * (p_ // 2) + 1  # ±30분 중심 대칭 윈도우 (15분간격 기준 5포인트: -30m, -15m, 0, +15m, +30m)
 
@@ -136,15 +116,11 @@ def preprocess(window_df, config, only_cleansing=False, fill_method='zero'):
     features_dict['p1d_max_1h'] = df['value'].shift(p_ * 24).rolling(window=cw, center=True).max()
     features_dict['p1d_min_1h'] = df['value'].shift(p_ * 24).rolling(window=cw, center=True).min()
     features_dict['p1d_std_1h'] = df['value'].shift(p_ * 24).rolling(window=cw, center=True).std()
-    #features_dict['p1d_skew_1h'] = df['value'].shift(p_ * 24).rolling(window=cw, center=True).skew()
-    #features_dict['p1d_kurt_1h'] = df['value'].shift(p_ * 24).rolling(window=cw, center=True).kurt()
 
     features_dict['p1w_ma_1h'] = df['value'].shift(p_ * 24 * 7).rolling(window=cw, center=True).mean()  # 1주일전 동시간대 ±30분 통계
     features_dict['p1w_max_1h'] = df['value'].shift(p_ * 24 * 7).rolling(window=cw, center=True).max()
     features_dict['p1w_min_1h'] = df['value'].shift(p_ * 24 * 7).rolling(window=cw, center=True).min()
     features_dict['p1w_std_1h'] = df['value'].shift(p_ * 24 * 7).rolling(window=cw, center=True).std()
-    #features_dict['p1w_skew_1h'] = df['value'].shift(p_ * 24 * 7).rolling(window=cw, center=True).skew()
-    #features_dict['p1w_kurt_1h'] = df['value'].shift(p_ * 24 * 7).rolling(window=cw, center=True).kurt()
 
     # 7. 이동 평균의 변화율 특징 생성
     shifted = features_dict['ma_1h']
@@ -163,53 +139,9 @@ def preprocess(window_df, config, only_cleansing=False, fill_method='zero'):
     features_dict['season_ma_1h'] = df_value1p - features_dict['ma_1h']
     features_dict['season_ma_1d'] = df_value1p - features_dict['ma_1d']
 
-    # 9. Wavelet 특징 생성 (고정 4시간 rolling window로 학습/추론 일관성 보장)
-    #wavelet = 'db1'
-    #level = 3  # 분해 레벨
-    #w_wavelet = p_ * 4  # 4시간 윈도우 (15분 간격 기준 16포인트)
-
-    #wavelet_approx = np.full(len(df_value1p), np.nan)
-    #wavelet_details = [np.full(len(df_value1p), np.nan) for _ in range(level)]
-
-    #arr_wav = np.nan_to_num(df_value1p.values, nan=0.0)
-    #for idx in range(w_wavelet - 1, len(arr_wav)):
-    #    segment = arr_wav[idx - w_wavelet + 1:idx + 1]
-    #    coeffs = pywt.wavedec(segment, wavelet, level=level)
-    #    wavelet_approx[idx] = coeffs[0][-1]  # approximation 마지막 계수
-    #    for lv in range(level):
-    #        wavelet_details[lv][idx] = coeffs[lv + 1][-1]  # detail 마지막 계수
-
-    #features_dict['wavelet_approx'] = wavelet_approx
-    #for lv in range(level):
-    #    features_dict[f'wavelet_detail_{lv + 1}'] = wavelet_details[lv]
-
-    # 10. 지수 이동 평균 (Exponential Moving Average)
-    ###features_dict['ema_1d'] = df_value1p.ewm(span=p_ * 24, adjust=False).mean()  # 이전 1일 지수 이동 평균
-
-    # 11. 누적 합계 및 변화율
-    #features_dict['cum_sum'] = df_value1p.cumsum()  # 누적 합계
-    #features_dict['rate_cum_sum'] = features_dict['cum_sum'].diff() / deltaT  # 누적 합계의 증감율
-    #features_dict['rate_rate_cum_sum'] = features_dict['rate_cum_sum'].diff() / deltaT  # 누적 합계의 증감율
-
-    # 12. 이벤트 탐지 (고정 4시간 rolling window로 학습/추론 일관성 보장)
-    #w_peak = p_ * 4  # 4시간 윈도우
-    #is_peak_arr = np.zeros(len(df_value1p), dtype=int)
-    #arr_peak = df_value1p.values
-    #for idx in range(w_peak - 1, len(arr_peak)):
-    #    segment = arr_peak[idx - w_peak + 1:idx + 1]
-    #    seg_peaks, _ = find_peaks(segment)
-    #    for pk in seg_peaks:
-    #        is_peak_arr[idx - w_peak + 1 + pk] = 1
-    #features_dict['is_peak'] = is_peak_arr
-
-    """features_dict['z_score'] = stats.zscore(df_value1p, nan_policy='omit')  # z-score 계산"""
-
-
     df = pd.concat([df, pd.DataFrame(features_dict, index=df.index)], axis=1)
 
-    nan_counts_df = df.isna().sum()  # 각 열마다 NaN의 갯수 출력
-    #for idx, item in enumerate(nan_counts_df):
-    #    print(f"{df.columns[idx]= }, NaN Count: {item}")
+    nan_counts_df = df.isna().sum()
 
     # 결측값 처리 (피처 생성시 시간 지연으로 인해 발생)
     df.dropna(inplace=True)
