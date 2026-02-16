@@ -9,11 +9,11 @@ import pywt
 from scipy.signal import find_peaks
 from scipy import stats
 
-def preprocess(raw_df, config, only_cleansing=False, fill_method='zero'):
+def preprocess(window_df, config, only_cleansing=False, fill_method='zero'):
     points = 60 // config['data']['sampling_minutes']  # e.g., 60/15 = 4
     freqInterval = f"{config['data']['sampling_minutes']}min"  # e.g., "15min"
 
-    df = raw_df.copy()
+    df = window_df.copy()
 
     p_ = points # 시간당 4 points 샘플링, 15min 간격
     freq = freqInterval
