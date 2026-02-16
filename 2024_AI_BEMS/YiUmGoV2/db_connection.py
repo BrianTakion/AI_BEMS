@@ -97,7 +97,19 @@ def read_enabled_devices(source, config: dict) -> list[dict]:
         logger.info("DB: %d devices with FALT_PRCV_YN='Y'", len(devices))
         return devices
 
-    # CSV mode -- hardcoded test devices
+    # CSV mode -- read from enabled_devices CSV file
+    csv_path = config["csv"].get("enabled_devices_path")
+    if csv_path:
+        abs_path = _resolve_path(csv_path)
+        if os.path.isfile(abs_path):
+            df = pd.read_csv(abs_path, dtype={"BLDG_ID": str, "DEV_ID": int, "FALT_PRCV_YN": str})
+            df = df[df["FALT_PRCV_YN"] == "Y"]
+            devices = [{"bldg_id": row["BLDG_ID"], "dev_id": row["DEV_ID"]} for _, row in df.iterrows()]
+            logger.info("CSV mode: read %d enabled devices from %s", len(devices), abs_path)
+            return devices
+        logger.warning("CSV mode: enabled_devices file not found: %s, using fallback", abs_path)
+
+    # Fallback: hardcoded test devices (backwards compat)
     devices = [{"bldg_id": "B0019", "dev_id": 2001}]
     logger.info("CSV mode: returning hardcoded device list (%d devices)", len(devices))
     return devices
@@ -238,7 +250,7 @@ def write_anomaly_result(
         )
         return
 
-    # CSV mode -- just log the result
+    # CSV mode -- write to result CSV file and also log
     status = "ANOMALY" if ad_score <= config["anomaly"]["score_threshold"] else "NORMAL"
     msg = (
         f"[{now:%Y-%m-%d %H:%M:%S}] "
@@ -248,3 +260,19 @@ def write_anomaly_result(
     )
     print(msg)
     logger.info("CSV mode (write_anomaly_result): %s", msg)
+
+    # Append to result CSV if path is configured
+    result_path = config["csv"].get("result_path")
+    if result_path:
+        abs_path = _resolve_path(result_path)
+        os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+        row = pd.DataFrame([{
+            "USE_DT": now.strftime("%Y-%m-%d %H:%M:%S"),
+            "BLDG_ID": bldg_id,
+            "DEV_ID": str(dev_id),
+            "AD_SCORE": round(ad_score, 2),
+            "AD_DESC": ad_desc,
+        }])
+        write_header = not os.path.isfile(abs_path)
+        row.to_csv(abs_path, mode="a", header=write_header, index=False)
+        logger.info("CSV mode: result appended to %s", abs_path)

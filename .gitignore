@@ -13,6 +13,7 @@ ENV/
 *.pkl
 *.pickle
 *.csv
+!**/enabled_devices.csv
 *.data
 *.h5
 *.hdf5
@@ -40,6 +41,9 @@ Thumbs.db
 *.pickle
 models/
 *.model
+
+# Output directories
+output/
 
 # Backup directories
 Backup/

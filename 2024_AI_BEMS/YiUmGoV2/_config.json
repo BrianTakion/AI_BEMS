@@ -1,7 +1,9 @@
 {
   "data_source": "csv",
   "csv": {
-    "data_path": "/workspace/2024_AI_BEMS/YiUmGoV2/dataset/data_colec_h_250730_260212_B0019.csv"
+    "data_path": "/workspace/2024_AI_BEMS/YiUmGoV2/dataset/data_colec_h_250730_260212_B0019.csv",
+    "enabled_devices_path": "dataset/enabled_devices.csv",
+    "result_path": "output/anomaly_results.csv"
   },
   "db": {
     "host": "localhost",
