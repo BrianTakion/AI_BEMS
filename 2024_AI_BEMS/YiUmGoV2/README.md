@@ -33,7 +33,7 @@ This guarantees identical feature engineering (lags, rolling stats, etc.) betwee
 ## E2E Test (CSV-only, no DB required)
 
 ```bash
-python run_e2e_test.py
+python manual_train_anomaly__run_e2e_test.py
 ```
 
 Automatically processes **all** devices from `enabled_devices.csv` where `FALT_PRCV_YN='Y'`:
@@ -75,7 +75,7 @@ YiUmGoV2/
 ├── infer_anomaly.py          # Inference, AD_SCORE, AD_DESC
 ├── train_anomaly.py          # Model training CLI (CSV-only, random window sampling)
 ├── utility.py                # Device name lookup helpers
-├── run_e2e_test.py           # E2E test (CSV-only, no DB)
+├── manual_train_anomaly__run_e2e_test.py  # E2E test (CSV-only, no DB)
 ├── test_integration.py       # End-to-end pipeline test
 ├── _config.json              # All configuration
 ├── requirements.txt          # Python dependencies
