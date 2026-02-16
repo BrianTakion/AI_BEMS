@@ -4,17 +4,20 @@
 train_anomaly.py
 LightGBM-based anomaly detection model -- training script.
 
-Reads sensor data from CSV (dev mode) or PostgreSQL (production mode),
-performs feature engineering via data_preprocessing.preprocess(), trains
-a LightGBM regression model, and saves it to models/anomaly/{dev_id}.txt.
+Loads ALL historical sensor data from CSV, then samples random 176-hour
+windows (controlled by training.max_steps in _config.json) to build a
+diverse training set.  Each window is preprocessed via
+data_preprocessing.preprocess() and the last `samples_per_window` rows
+are collected.  A LightGBM regression model is trained on the pooled
+samples and saved to models/anomaly/{dev_id}.txt.
 
 Usage examples:
     # Train with explicit CSV path and date range
-    python train_anomaly.py --dev_id 2001 \
-        --csv_path ../YiUmGO/data_colec_h_202509091411_B0019.csv \
+    python train_anomaly.py --dev_id 2001 \\
+        --csv_path ../YiUmGO/data_colec_h_202509091411_B0019.csv \\
         --start_date 2025-03-24 --end_date 2025-09-09
 
-    # Train using data_source and paths from _config.json
+    # Train using csv.data_path from _config.json
     python train_anomaly.py --dev_id 2001
 """
 
@@ -91,55 +94,6 @@ def _load_csv_chunked(csv_path, dev_id, tag_cd, start_date=None, end_date=None):
     return df
 
 
-def _load_db_all(config, dev_id, tag_cd, start_date=None, end_date=None):
-    """Read ALL historical sensor data from PostgreSQL for training.
-
-    Unlike db_connection.read_sensor_data() which only reads the last N hours,
-    this function fetches all available data (with optional date filters).
-    """
-    from sqlalchemy import create_engine
-
-    db_cfg = config["db"]
-    url = (
-        f"postgresql://{db_cfg['user']}:{db_cfg['password']}"
-        f"@{db_cfg['host']}:{db_cfg['port']}/{db_cfg['database']}"
-    )
-    engine = create_engine(url)
-    table = config["data"]["collection_table"]  # DATA_COLEC_H
-
-    where_clauses = [
-        '"DEV_ID" = %(dev_id)s',
-        '"TAG_CD" = %(tag_cd)s',
-    ]
-    params = {"dev_id": str(dev_id), "tag_cd": str(tag_cd)}
-
-    if start_date is not None:
-        where_clauses.append('"COLEC_DT" >= %(start_dt)s')
-        params["start_dt"] = pd.to_datetime(start_date)
-    if end_date is not None:
-        where_clauses.append('"COLEC_DT" <= %(end_dt)s')
-        params["end_dt"] = pd.to_datetime(end_date)
-
-    where_sql = " AND ".join(where_clauses)
-    query = (
-        f'SELECT "COLEC_DT" AS colec_dt, "COLEC_VAL" AS colec_val '
-        f'FROM "{table}" '
-        f"WHERE {where_sql} "
-        f'ORDER BY "COLEC_DT" ASC'
-    )
-
-    print(f"[DATA] Querying DB table {table} for dev_id={dev_id}, tag_cd={tag_cd} ...")
-    df = pd.read_sql(query, engine, params=params)
-    df["colec_dt"] = pd.to_datetime(df["colec_dt"])
-    df["colec_val"] = df["colec_val"].astype(float)
-    print(f"[DATA] Loaded {len(df)} rows from DB")
-
-    if df.empty:
-        raise ValueError(
-            f"No data found in DB for dev_id={dev_id}, tag_cd={tag_cd}"
-        )
-    return df
-
 
 # ===================================================================
 # Main
@@ -155,7 +109,7 @@ def main():
     )
     parser.add_argument(
         "--csv_path", type=str, default=None,
-        help="CSV data file path. Overrides data_source setting in config."
+        help="CSV data file path. Overrides csv.data_path in config."
     )
     parser.add_argument(
         "--start_date", type=str, default=None,
@@ -176,73 +130,135 @@ def main():
 
     tag_cd = config["data"]["tag_cd"]  # 30001
     model_cfg = config["model"]
+    fetch_hours = config["data"]["fetch_window_hours"]  # 176
+    max_steps = config["training"]["max_steps"]
+    samples_per_window = config["training"]["samples_per_window"]
 
     print("=" * 60)
-    print(f"[TRAIN] Device ID : {args.dev_id}")
-    print(f"[TRAIN] Tag CD    : {tag_cd}")
-    print(f"[TRAIN] Date range: {args.start_date or '(all)'} ~ {args.end_date or '(all)'}")
+    print(f"[TRAIN] Device ID          : {args.dev_id}")
+    print(f"[TRAIN] Tag CD             : {tag_cd}")
+    print(f"[TRAIN] Date range         : {args.start_date or '(all)'} ~ {args.end_date or '(all)'}")
+    print(f"[TRAIN] Window size        : {fetch_hours}h")
+    print(f"[TRAIN] Max steps          : {max_steps}")
+    print(f"[TRAIN] Samples per window : {samples_per_window}")
     print("=" * 60)
 
     # ------------------------------------------------------------------
-    # 2. Load data
+    # 2. Load ALL historical CSV data
     # ------------------------------------------------------------------
     t0 = time.time()
 
-    if args.csv_path is not None:
-        # Explicit CSV path from CLI
-        csv_abs = os.path.normpath(os.path.join(SCRIPT_DIR, args.csv_path))
-        if not os.path.isfile(csv_abs):
-            # Try as-is (absolute path)
-            csv_abs = args.csv_path
-        df_sensor = _load_csv_chunked(
-            csv_abs, args.dev_id, tag_cd, args.start_date, args.end_date
-        )
-    elif config.get("data_source", "csv") == "csv":
-        # CSV mode from config
-        csv_rel = config["csv"]["data_path"]
-        csv_abs = os.path.normpath(os.path.join(SCRIPT_DIR, csv_rel))
-        df_sensor = _load_csv_chunked(
-            csv_abs, args.dev_id, tag_cd, args.start_date, args.end_date
-        )
-    else:
-        # DB mode -- fetch ALL historical data
-        df_sensor = _load_db_all(
-            config, args.dev_id, tag_cd, args.start_date, args.end_date
-        )
+    csv_path = args.csv_path or config["csv"]["data_path"]
+    csv_abs = os.path.normpath(os.path.join(SCRIPT_DIR, csv_path))
+    if not os.path.isfile(csv_abs):
+        # Try as-is (absolute path)
+        csv_abs = csv_path
+
+    df_sensor = _load_csv_chunked(
+        csv_abs, args.dev_id, tag_cd, args.start_date, args.end_date
+    )
 
     load_time = time.time() - t0
     print(f"[TRAIN] Data loaded in {load_time:.1f}s  ({len(df_sensor)} rows)")
 
     # ------------------------------------------------------------------
-    # 3. Build raw DataFrame:  index=colec_dt, columns=['value']
+    # 3. Build full historical DataFrame:  index=colec_dt, columns=['value']
     # ------------------------------------------------------------------
-    df_raw = pd.DataFrame(
+    df_all = pd.DataFrame(
         data=df_sensor["colec_val"].values,
         index=df_sensor["colec_dt"],
         columns=["value"],
     )
-    print(f"[TRAIN] Raw data range: {df_raw.index[0]} ~ {df_raw.index[-1]}")
+    print(f"[TRAIN] Raw data range: {df_all.index[0]} ~ {df_all.index[-1]}")
 
     # ------------------------------------------------------------------
-    # 4. Feature engineering via data_preprocessing
+    # 4. Random window sampling + feature engineering
     # ------------------------------------------------------------------
-    X_df, y_df, nan_counts_df, missing_ratio = DP.preprocess(df_raw, config, fill_method="ffill")
-    print(f"[TRAIN] Features: {X_df.shape[1]},  Samples: {len(X_df)}")
-    print(f"[TRAIN] NaN counts max: {nan_counts_df.max()},  Missing ratio: {missing_ratio}")
+    window_td = pd.Timedelta(hours=fetch_hours)
+    min_end = df_all.index[0] + window_td
+    max_end = df_all.index[-1]
 
-    if len(X_df) == 0:
-        print("[ERROR] No samples after preprocessing. Check data quality / date range.")
+    if min_end > max_end:
+        print(f"[ERROR] Not enough data for a single {fetch_hours}h window. "
+              f"Need data spanning at least {fetch_hours}h.")
         sys.exit(1)
 
+    min_ts = min_end.timestamp()
+    max_ts = max_end.timestamp()
+
+    np.random.seed(42)
+
+    X_list = []
+    y_list = []
+    windows_sampled = 0
+    windows_skipped = 0
+
+    print(f"[TRAIN] Sampling {max_steps} random {fetch_hours}h windows ...")
+
+    for step in range(max_steps):
+        # Pick a random end_time within the valid range
+        rand_ts = np.random.uniform(min_ts, max_ts)
+        end_time = pd.Timestamp.fromtimestamp(rand_ts)
+        start_time = end_time - window_td
+
+        # Slice the window from the full dataset
+        window_df = df_all.loc[start_time:end_time].copy()
+
+        # Skip windows with insufficient raw data
+        if len(window_df) < 2:
+            windows_skipped += 1
+            continue
+
+        # Preprocess the window
+        try:
+            X_df, y_df, nan_counts_df, missing_ratio = DP.preprocess(
+                window_df, config, fill_method="ffill"
+            )
+        except Exception as exc:
+            windows_skipped += 1
+            if (step + 1) % 100 == 0:
+                print(f"  [WARN] Step {step + 1}: preprocess failed ({exc})")
+            continue
+
+        # Need at least samples_per_window rows after preprocessing
+        if len(X_df) < samples_per_window:
+            windows_skipped += 1
+            continue
+
+        # Take the last samples_per_window rows from this window
+        X_list.append(X_df.iloc[-samples_per_window:])
+        y_list.append(y_df.iloc[-samples_per_window:])
+        windows_sampled += 1
+
+        if (step + 1) % 100 == 0:
+            print(f"  [PROGRESS] Step {step + 1}/{max_steps}  "
+                  f"sampled={windows_sampled}  skipped={windows_skipped}")
+
+    print(f"[TRAIN] Window sampling complete: "
+          f"{windows_sampled} sampled, {windows_skipped} skipped")
+
+    if windows_sampled == 0:
+        print("[ERROR] No valid windows produced samples. "
+              "Check data quality / date range.")
+        sys.exit(1)
+
+    # Concatenate all collected samples
+    X_all = pd.concat(X_list, ignore_index=True)
+    y_all = pd.concat(y_list, ignore_index=True)
+
+    n_features = X_all.shape[1]
+    n_samples = len(X_all)
+    print(f"[TRAIN] Total samples: {n_samples}  Features: {n_features}")
+
     # ------------------------------------------------------------------
-    # 5. Train / test split (time-ordered, no shuffle)
+    # 5. Train / test split (shuffle=True -- samples from random windows)
     # ------------------------------------------------------------------
     test_size = model_cfg["test_size"]
     X_train, X_test, y_train, y_test = train_test_split(
-        X_df, y_df,
+        X_all, y_all,
         test_size=test_size,
         random_state=42,
-        shuffle=False,
+        shuffle=True,
     )
     print(f"[TRAIN] Train size: {len(X_train)},  Test size: {len(X_test)}")
 
@@ -284,7 +300,7 @@ def main():
 
     print(f"[TRAIN] Training completed in {train_time:.1f}s")
     print(f"[TRAIN] Best iteration: {model.best_iteration}")
-    print(f"[TRAIN] Test RMSE: {rmse:.4f}  ({X_df.shape[1]} features)")
+    print(f"[TRAIN] Test RMSE: {rmse:.4f}  ({n_features} features)")
 
     # ------------------------------------------------------------------
     # 8. Save model
@@ -302,15 +318,19 @@ def main():
     print("=" * 60)
     print("  Training Summary")
     print("=" * 60)
-    print(f"  Device ID        : {args.dev_id}")
-    print(f"  Tag CD           : {tag_cd}")
-    print(f"  Data rows (raw)  : {len(df_sensor)}")
-    print(f"  Samples (after FE): {len(X_df)}")
-    print(f"  Features         : {X_df.shape[1]}")
-    print(f"  Train / Test     : {len(X_train)} / {len(X_test)}")
-    print(f"  Test RMSE        : {rmse:.4f}")
-    print(f"  Best iteration   : {model.best_iteration}")
-    print(f"  Model file       : {model_path}")
+    print(f"  Device ID          : {args.dev_id}")
+    print(f"  Tag CD             : {tag_cd}")
+    print(f"  Data rows (raw)    : {len(df_sensor)}")
+    print(f"  Window size        : {fetch_hours}h")
+    print(f"  Windows sampled    : {windows_sampled}")
+    print(f"  Windows skipped    : {windows_skipped}")
+    print(f"  Samples per window : {samples_per_window}")
+    print(f"  Total samples      : {n_samples}")
+    print(f"  Features           : {n_features}")
+    print(f"  Train / Test       : {len(X_train)} / {len(X_test)}")
+    print(f"  Test RMSE          : {rmse:.4f}")
+    print(f"  Best iteration     : {model.best_iteration}")
+    print(f"  Model file         : {model_path}")
     print("=" * 60)
 
 
