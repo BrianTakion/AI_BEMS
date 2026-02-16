@@ -163,8 +163,6 @@ def read_sensor_data(
     # The CSV is ~4.3 GB.  We read only the columns we need and filter
     # in chunks to avoid loading the entire file into memory.
     CHUNK_SIZE = 500_000
-    sampling_min = config["data"]["sampling_minutes"]
-    max_tail_rows = (60 // sampling_min) * fetch_hours  # DB 모드와 동일한 fetch_window_hours 적용
 
     usecols = ["dev_id", "tag_cd", "colec_dt", "colec_val"]
     chunks: list[pd.DataFrame] = []
@@ -190,11 +188,12 @@ def read_sensor_data(
     df["colec_dt"] = pd.to_datetime(df["colec_dt"]).dt.floor("min")
     df = df.sort_values("colec_dt").reset_index(drop=True)
 
-    # Keep only the tail -- DB 모드와 동일하게 fetch_window_hours 기반으로 제한
-    df = df.tail(max_tail_rows).reset_index(drop=True)
+    # Keep only the last fetch_window_hours by TIME (consistent with DB mode cutoff)
+    cutoff = df["colec_dt"].iloc[-1] - timedelta(hours=fetch_hours)
+    df = df[df["colec_dt"] >= cutoff].reset_index(drop=True)
     df = df[["colec_dt", "colec_val"]]
 
-    logger.info("CSV: returning %d rows (last %d, %dh window) for dev_id=%s", len(df), max_tail_rows, fetch_hours, dev_id)
+    logger.info("CSV: returning %d rows (%dh window) for dev_id=%s", len(df), fetch_hours, dev_id)
     return df
 
 
