@@ -17,6 +17,8 @@ import logging
 import os
 import time
 
+import numpy as np
+
 import data_source
 import data_preprocessing
 import infer_anomaly
@@ -78,6 +80,27 @@ def process_device(source, config, bldg_id, dev_id):
     if len(raw_df) < 2:
         logger.warning("Insufficient data for dev_id=%s (%d rows) -- skipping", dev_id, len(raw_df))
         return None
+
+    # 4b. Near-zero sensor check -- skip preprocessing & inference
+    sampling_min = config["data"]["sampling_minutes"]
+    scoring_hours = config["data"]["scoring_window_hours"]
+    window_size = (60 // sampling_min) * scoring_hours
+    recent_vals = raw_df["colec_val"].values[-window_size:]
+
+    if np.mean(np.abs(recent_vals)) < 0.01:
+        if scoring_hours >= 24:
+            window_label = f"{scoring_hours // 24}D 평균"
+        else:
+            window_label = f"{scoring_hours}H 평균"
+        ad_score = 100.0
+        ad_desc = (
+            f"센서 제로 | {window_label} | "
+            f"정상지수: 100.0 | RMSE: 0.0 | "
+            f"평균: 0.0, 표준편차: 0.0, 최대: 0.0, 최소: 0.0"
+        )
+        logger.info("Sensor zero detected for dev_id=%s -- skipping inference", dev_id)
+        data_source.write_anomaly_result(source, config, bldg_id, dev_id, ad_score, ad_desc)
+        return (ad_score, ad_desc)
 
     # 5. Build window_df: index=colec_dt, columns=['value']
     window_df = raw_df.set_index("colec_dt")[["colec_val"]].rename(columns={"colec_val": "value"})

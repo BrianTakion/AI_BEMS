@@ -58,9 +58,9 @@ def compute_ad_score(y_actual, y_predicted, config):
     rmse = root_mean_squared_error(y_actual, y_predicted)
     mean_actual = np.mean(np.abs(y_actual))
 
-    if mean_actual < 1e-8:
+    if mean_actual < 1e-3:
         # When actual values are near zero, even small RMSE is significant
-        score = 0.0 if rmse > 1e-8 else 100.0
+        score = 0.0 if rmse > 1e-3 else 100.0
     else:
         score = max(0.0, 100.0 - (rmse / mean_actual) * 100.0)
 
@@ -100,9 +100,9 @@ def generate_ad_desc(y_actual, y_predicted, ad_score, config):
 
     threshold = config['anomaly']['score_threshold']
     if ad_score > threshold:
-        desc = " 정상 상태 | "
-    else: 
-        desc = " 이상 상태 | "
+        desc = "정상 상태 | "
+    else:
+        desc = "이상 상태 | "
     desc += (
         f"{window_label} | "
         f"정상지수: {ad_score:.1f} | "
