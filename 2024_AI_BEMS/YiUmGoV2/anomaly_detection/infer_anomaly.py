@@ -58,13 +58,13 @@ def compute_ad_score(y_actual, y_predicted, config):
     rmse = root_mean_squared_error(y_actual, y_predicted)
     mean_actual = np.mean(np.abs(y_actual))
 
-    if mean_actual < 1e-3:
+    if mean_actual < 0.01:
         # When actual values are near zero, even small RMSE is significant
-        score = 0.0 if rmse > 1e-3 else 100.0
+        score = 0.0 if rmse > 0.01 else 100.0
     else:
         score = max(0.0, 100.0 - (rmse / mean_actual) * 100.0)
 
-    return round(float(score), 2)
+    return round(float(score), 1)
 
 
 def generate_ad_desc(y_actual, y_predicted, ad_score, config):
@@ -106,8 +106,8 @@ def generate_ad_desc(y_actual, y_predicted, ad_score, config):
     desc += (
         f"{window_label} | "
         f"정상지수: {ad_score:.1f} | "
-        f"RMSE: {rmse:.1f} | "
-        f"평균: {mean_val:.1f}, 표준편차: {std_val:.1f}, 최대: {max_val:.1f}, 최소: {min_val:.1f}"
+        f"RMSE: {rmse:.2f} | "
+        f"평균: {mean_val:.2f}, 표준편차: {std_val:.2f}, 최대: {max_val:.2f}, 최소: {min_val:.2f}"
     )
 
     # Truncate to 1000 characters (VARCHAR(1000) in DB)

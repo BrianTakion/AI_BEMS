@@ -13,9 +13,9 @@ import os
 import pandas as pd
 import pytest
 
-import data_source as DS
-import data_preprocessing
-import infer_anomaly
+from anomaly_detection import data_source as DS
+from anomaly_detection import data_preprocessing
+from anomaly_detection import infer_anomaly
 
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -72,7 +72,7 @@ def preprocessed(window_df, config):
 @pytest.fixture
 def model(config):
     model_dir = config["anomaly"]["model_dir"]
-    model_path = os.path.join(SCRIPT_DIR, model_dir, "2001.txt")
+    model_path = os.path.join(SCRIPT_DIR, "anomaly_detection", model_dir, "2001.txt")
     if not os.path.isfile(model_path):
         pytest.skip(f"Model file not found: {model_path}")
     return infer_anomaly.load_model(model_path)

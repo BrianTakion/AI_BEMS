@@ -12,8 +12,8 @@ SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 @pytest.fixture
 def config():
-    """Load _config.json from the project root."""
-    config_path = os.path.join(SCRIPT_DIR, "_config.json")
+    """Load _config.json from anomaly_detection/."""
+    config_path = os.path.join(SCRIPT_DIR, "anomaly_detection", "_config.json")
     with open(config_path, "r") as f:
         return json.load(f)
 

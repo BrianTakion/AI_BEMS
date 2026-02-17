@@ -15,7 +15,7 @@ Reads enabled devices from config_anomaly_devices.csv (FALT_PRCV_YN='Y').
 Skips training when a model already exists.
 
 Usage:
-    python train_anomaly.py --csv
+    python anomaly_detection/train_anomaly.py --csv
 """
 
 import os
@@ -31,7 +31,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import root_mean_squared_error
 
 # ---------------------------------------------------------------------------
-# Path setup -- ensure YiUmGoV2/ is importable
+# Path setup -- ensure sibling modules are importable when run as a script
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if SCRIPT_DIR not in sys.path:

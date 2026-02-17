@@ -23,13 +23,13 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Resolve paths relative to this script's directory (YiUmGoV2/)
+# Resolve paths relative to this package directory (anomaly_detection/)
 # ---------------------------------------------------------------------------
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def _resolve_path(rel_path: str) -> str:
-    """Resolve a path that is relative to the YiUmGoV2/ directory."""
+    """Resolve a path that is relative to the anomaly_detection/ directory."""
     return os.path.normpath(os.path.join(_SCRIPT_DIR, rel_path))
 
 

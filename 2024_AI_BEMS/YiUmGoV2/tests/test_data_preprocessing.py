@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import data_preprocessing
+from anomaly_detection import data_preprocessing
 
 EXPECTED_FEATURE_COUNT = 44
 

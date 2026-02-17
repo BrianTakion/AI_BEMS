@@ -2,7 +2,7 @@
   "data_source": "csv",
   "csv": {
     "data_path": "/workspace/2024_AI_BEMS/YiUmGoV2/dataset/data_colec_h_250730_260212_B0019.csv",
-    "config_anomaly_devices_path": "dataset/config_anomaly_devices.csv",
+    "config_anomaly_devices_path": "config_anomaly_devices.csv",
     "anomaly_results_path": "output/anomaly_results.csv"
   },
   "db": {
@@ -20,7 +20,7 @@
     "tag_cd": 30001
   },
   "training": {
-    "max_steps": 1000,
+    "max_steps": 5000,
     "samples_per_window": 8
   },
   "anomaly": {

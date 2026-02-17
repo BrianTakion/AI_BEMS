@@ -7,8 +7,8 @@ Designed to be executed hourly via cron.
 Flow: read config -> get enabled devices -> fetch data -> preprocess -> infer -> write results
 
 Usage:
-    python ai_anomaly_runner.py          # DB mode (production, writes to DB)
-    python ai_anomaly_runner.py --csv    # CSV mode (development, writes to output/)
+    python anomaly_detection/ai_anomaly_runner.py          # DB mode (production, writes to DB)
+    python anomaly_detection/ai_anomaly_runner.py --csv    # CSV mode (development, writes to output/)
 """
 
 import argparse
@@ -24,7 +24,7 @@ import data_preprocessing
 import infer_anomaly
 
 # ---------------------------------------------------------------------------
-# Resolve paths relative to this script's directory (YiUmGoV2/)
+# Resolve paths relative to this package directory (anomaly_detection/)
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -95,8 +95,8 @@ def process_device(source, config, bldg_id, dev_id):
         ad_score = 100.0
         ad_desc = (
             f"센서 제로 | {window_label} | "
-            f"정상지수: 100.0 | RMSE: 0.0 | "
-            f"평균: 0.0, 표준편차: 0.0, 최대: 0.0, 최소: 0.0"
+            f"정상지수: 100.0 | RMSE: 0.00 | "
+            f"평균: 0.00, 표준편차: 0.00, 최대: 0.00, 최소: 0.00"
         )
         logger.info("Sensor zero detected for dev_id=%s -- skipping inference", dev_id)
         data_source.write_anomaly_result(source, config, bldg_id, dev_id, ad_score, ad_desc)
