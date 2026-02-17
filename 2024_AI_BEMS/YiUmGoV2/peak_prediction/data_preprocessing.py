@@ -7,31 +7,25 @@ power and peak time prediction.
 Pipeline:
   1. Resample raw 15-min data to 1-hour means
   2. Extract daily peaks (power value + 15-min slot index) as targets
-  3. Build ~57 hybrid features per day from 14-day hourly history
+  3. Build ~40 hybrid features per day from 14-day hourly history
 
-Feature categories (~57 total):
+Feature categories (~40 total):
   - Temporal (7): weekday, month, is_holiday, sin/cos encodings
   - Previous-day peaks (4): peak power/slot from prior 1-3 days
   - Same-weekday lag (2): peak power/slot from same weekday last week
   - Rolling peak stats 7d (5): mean, std, max, min peak; mean peak slot
-  - Rolling peak quantiles 7d (2): 75th, 90th percentile
-  - Peak time distribution 7d (4): slot std, slot median, most common period, same weekday slot
   - Rolling peak stats 14d (4): mean, std, max peak; trend (slope)
-  - Rolling peak quantiles 14d (2): 75th, 90th percentile
   - Daily load shape (4): prev day mean, std, min, max/min ratio
   - Compressed profile prev day (4): morning/afternoon/evening/night means
-  - Load ramp features (2): morning ramp, peak-to-mean ratio
   - Compressed profile prev week same day (4): morning/afternoon/evening/night means
   - Same-day partial (4): today_max_so_far, today_max_slot_so_far, today_mean_so_far, hours_elapsed
   - Trend (2): peak_trend_7d slope, weekday/weekend peak ratio
-  - Day-type interaction (3): weekday x mean peak, prev day holiday, consecutive workdays
 """
 
 import numpy as np
 import pandas as pd
 import holidays
 import datetime
-from collections import Counter
 
 
 def _get_korean_holidays(year_range):
@@ -173,18 +167,14 @@ def preprocess_for_training(df_raw, config):
     year_range = range(all_dates[0].year, all_dates[-1].year + 1)
     holiday_set = _get_korean_holidays(year_range)
 
-    rng = np.random.RandomState(42)
     feature_rows = []
     target_power = []
     target_slot = []
 
     for i in range(min_history_days, len(all_dates)):
         date = all_dates[i]
-        # Randomize hours_elapsed to prevent same-day feature leakage
-        hours_elapsed = int(rng.randint(0, 24))  # 0 to 23 inclusive
         features = _build_features_for_date(
-            date, daily_peaks, hourly, holiday_set,
-            hours_elapsed=hours_elapsed, today_raw_15min=df
+            date, daily_peaks, hourly, holiday_set, hours_elapsed=24
         )
         if features is not None:
             feature_rows.append(features)
@@ -322,29 +312,6 @@ def _build_features_for_date(date, daily_peaks, hourly, holiday_set,
     else:
         return None  # Insufficient history
 
-    # Rolling peak quantiles - 7 day (2)
-    features["peak_75pct_7d"] = np.percentile(past_7d, 75)
-    features["peak_90pct_7d"] = np.percentile(past_7d, 90)
-
-    # Peak time distribution features (4)
-    features["peak_slot_std_7d"] = np.std(past_7d_slots) if len(past_7d_slots) >= 3 else 0.0
-    features["peak_slot_median_7d"] = np.median(past_7d_slots)
-
-    # Most common peak period (0=night 0-6, 1=morning 6-12, 2=afternoon 12-18, 3=evening 18-24)
-    slot_periods = [s // 24 for s in past_7d_slots]  # 96 slots / 4 periods = 24 slots each
-    if slot_periods:
-        features["most_common_peak_period"] = Counter(slot_periods).most_common(1)[0][0]
-    else:
-        features["most_common_peak_period"] = 2  # default afternoon
-
-    # Same weekday peak slot over last 2 weeks
-    same_wd_slots = []
-    for w in [7, 14]:
-        wd_date = d - pd.Timedelta(days=w)
-        if wd_date in daily_peaks.index:
-            same_wd_slots.append(daily_peaks.loc[wd_date, "peak_slot"])
-    features["same_weekday_peak_slot_2w"] = np.mean(same_wd_slots) if same_wd_slots else features.get("mean_peak_slot_7d", 0.0)
-
     # =====================================================================
     # 5. Rolling peak stats - 14 day (4)
     # =====================================================================
@@ -365,10 +332,6 @@ def _build_features_for_date(date, daily_peaks, hourly, holiday_set,
         features["trend_peak_14d"] = slope
     else:
         features["trend_peak_14d"] = 0.0
-
-    # Rolling peak quantiles - 14 day (2)
-    features["peak_75pct_14d"] = np.percentile(past_14d, 75)
-    features["peak_90pct_14d"] = np.percentile(past_14d, 90)
 
     # =====================================================================
     # 6. Daily load shape - prev day (4)
@@ -400,14 +363,6 @@ def _build_features_for_date(date, daily_peaks, hourly, holiday_set,
     features["prev_day_morning_mean"] = profile["morning_mean"]
     features["prev_day_afternoon_mean"] = profile["afternoon_mean"]
     features["prev_day_evening_mean"] = profile["evening_mean"]
-
-    # Load ramp features (2)
-    features["prev_day_morning_ramp"] = profile["morning_mean"] - profile["night_mean"]
-    prev_day_mean_val = features.get("prev_day_mean", 0.0)
-    features["prev_day_peak_to_mean_ratio"] = (
-        features["prev_1d_peak_power"] / prev_day_mean_val
-        if prev_day_mean_val > 0.01 else 0.0
-    )
 
     # =====================================================================
     # 8. Compressed profile - prev week same day (4)
@@ -481,22 +436,5 @@ def _build_features_for_date(date, daily_peaks, hourly, holiday_set,
         features["weekday_weekend_peak_ratio"] = np.mean(weekday_peaks) / np.mean(weekend_peaks)
     else:
         features["weekday_weekend_peak_ratio"] = 1.0
-
-    # =====================================================================
-    # 11. Day-type interaction features (3)
-    # =====================================================================
-    features["is_weekday_x_mean_peak_7d"] = (1 if d.weekday() < 5 else 0) * features["mean_peak_7d"]
-
-    prev_day_date = d - pd.Timedelta(days=1)
-    features["prev_day_was_holiday"] = 1 if (prev_day_date.date() in holiday_set or prev_day_date.weekday() >= 5) else 0
-
-    # Consecutive workdays before this date
-    consec = 0
-    for back in range(1, 15):
-        check_date = d - pd.Timedelta(days=back)
-        if check_date.date() in holiday_set or check_date.weekday() >= 5:
-            break
-        consec += 1
-    features["consecutive_workdays"] = consec
 
     return features

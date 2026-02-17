@@ -28,26 +28,15 @@
     "config_table": "DEV_USE_PURP_REL_R",
     "result_table": "MAX_DMAND_FCST_H"
   },
-  "model_power": {
+  "model": {
     "objective": "regression",
     "metric": "rmse",
     "boosting_type": "gbdt",
-    "learning_rate": 0.05,
-    "num_leaves": 20,
-    "min_child_samples": 10,
-    "num_boost_round": 1000,
-    "early_stopping_rounds": 50,
-    "verbose": -1
-  },
-  "model_time": {
-    "objective": "regression",
-    "metric": "rmse",
-    "boosting_type": "gbdt",
-    "learning_rate": 0.05,
-    "num_leaves": 15,
-    "min_child_samples": 15,
-    "num_boost_round": 1000,
-    "early_stopping_rounds": 50,
+    "learning_rate": 0.1,
+    "num_leaves": 31,
+    "num_boost_round": 500,
+    "early_stopping_rounds": 30,
+    "test_size": 0.15,
     "verbose": -1
   }
 }
