@@ -106,7 +106,7 @@ def read_enabled_devices(source, config: dict) -> list[dict]:
 
 
 # ===================================================================
-# 3. read_sensor_data  (unchanged from anomaly_detection)
+# 3. read_sensor_data
 # ===================================================================
 def read_sensor_data(
     source,
@@ -197,7 +197,7 @@ def read_sensor_data(
 
 
 # ===================================================================
-# 4. write_peak_result  (replaces write_anomaly_result)
+# 4. write_peak_result
 # ===================================================================
 def write_peak_result(
     source,
