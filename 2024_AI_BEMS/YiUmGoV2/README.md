@@ -53,7 +53,7 @@ python -m pytest tests/ -v
          │  (44 time-series features)  │  (44 time-series features)
          │                             │
          ▼                             ▼
-  infer_anomaly.py              models/anomaly/
+  infer_anomaly.py              models/
   (scoring, description)        ({dev_id}.txt)
          │
          ▼
@@ -81,7 +81,7 @@ anomaly_detection/train_anomaly.py --csv
   ├─ load sensor history from    dataset/data_colec_h_*.csv  (chunked, 500K rows)
   ├─ sample random 176h windows → data_preprocessing.preprocess()
   ├─ train LightGBM per device
-  └─ save model to               anomaly_detection/models/anomaly/{dev_id}.txt
+  └─ save model to               anomaly_detection/models/{dev_id}.txt
 
 anomaly_detection/ai_anomaly_runner.py --csv
   ├─ read enabled devices from   anomaly_detection/config_anomaly_devices.csv
@@ -154,7 +154,7 @@ All settings in `anomaly_detection/_config.json`:
 | `training.max_steps` | `5000` | Random windows to sample during training |
 | `training.samples_per_window` | `8` | Samples taken from each window (= 2h at 15min) |
 | `anomaly.score_threshold` | `50` | Anomaly threshold (score <= threshold = anomaly) |
-| `anomaly.model_dir` | `"models/anomaly"` | Directory for trained model files |
+| `anomaly.model_dir` | `"models"` | Directory for trained model files |
 | `anomaly.config_table` | `"DEV_USE_PURP_REL_R"` | DB table for device enablement config |
 | `anomaly.result_table` | `"FALT_PRCV_FCST"` | DB table for anomaly detection results |
 | `model.*` | | LightGBM hyperparameters (objective, metric, num_leaves, etc.) |
@@ -172,7 +172,7 @@ YiUmGoV2/
 │   ├── data_source.py           # CSV/DB dual-mode data access
 │   ├── _config.json             # All configuration
 │   ├── config_anomaly_devices.csv  # Enabled devices (BLDG_ID, DEV_ID, FALT_PRCV_YN)
-│   ├── models/anomaly/          # Trained LightGBM models ({dev_id}.txt)
+│   ├── models/                  # Trained LightGBM models ({dev_id}.txt)
 │   ├── output/                  # CSV-mode inference results
 │   └── docs/
 │       ├── checkpoint_csv_to_db_migration.md  # CSV-to-DB migration guide

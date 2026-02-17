@@ -25,7 +25,7 @@
   },
   "anomaly": {
     "score_threshold": 50,
-    "model_dir": "models/anomaly",
+    "model_dir": "models",
     "config_table": "DEV_USE_PURP_REL_R",
     "result_table": "FALT_PRCV_FCST"
   },

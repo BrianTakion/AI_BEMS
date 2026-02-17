@@ -9,7 +9,7 @@ Loads ALL historical sensor data via data_source, then samples random
 build a diverse training set.  Each window is preprocessed via
 data_preprocessing.preprocess() and the last `samples_per_window` rows
 are collected.  A LightGBM regression model is trained on the pooled
-samples and saved to models/anomaly/{dev_id}.txt.
+samples and saved to models/{dev_id}.txt.
 
 Reads enabled devices from config_anomaly_devices.csv (FALT_PRCV_YN='Y').
 Skips training when a model already exists.
