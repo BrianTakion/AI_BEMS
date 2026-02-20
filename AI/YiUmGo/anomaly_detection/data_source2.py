@@ -200,6 +200,7 @@ def read_sensor_data(
         csv_path,
         usecols=usecols,
         dtype={"dev_id": str, "tag_cd": str, "colec_val": float},
+        parse_dates=["colec_dt"],
         chunksize=CHUNK_SIZE,
     ):
         mask = (chunk["dev_id"] == str(dev_id)) & (chunk["tag_cd"] == str(tag_cd))
@@ -212,7 +213,7 @@ def read_sensor_data(
         return pd.DataFrame(columns=["colec_dt", "colec_val"])
 
     df = pd.concat(chunks, ignore_index=True)
-    df["colec_dt"] = pd.to_datetime(df["colec_dt"], format="%Y-%m-%d %H:%M:%S.%f").dt.floor("min")
+    df["colec_dt"] = pd.to_datetime(df["colec_dt"]).dt.floor("min")
     df = df.sort_values("colec_dt").reset_index(drop=True)
 
     # Apply time cutoff (skip when fetch_hours=0 to return all data for training)
