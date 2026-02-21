@@ -25,7 +25,12 @@
       "mcp__plugin_serena_serena__think_about_task_adherence",
       "mcp__plugin_serena_serena__replace_content",
       "Bash(git remote set-url:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(jq:*)",
+      "Bash(git -C /workspace status --short -- AI/YiUmGo/)",
+      "Bash(git -C /workspace log --oneline -10)",
+      "Bash(git -C /workspace diff --stat -- AI/YiUmGo/)",
+      "Bash(git -C /workspace diff --cached --stat)"
     ]
   }
 }

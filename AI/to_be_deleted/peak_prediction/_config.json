@@ -1,0 +1,53 @@
+{
+  "data_source": "csv",
+  "csv": {
+    "data_path": "/workspace/2024_AI_BEMS/YiUmGoV2/dataset/data_colec_h_250730_260212_B0019.csv",
+    "config_peak_devices_path": "config_peak_devices.csv",
+    "peak_results_path": "output/peak_results.csv"
+  },
+  "db": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "bems",
+    "user": "ai_user",
+    "password": "changeme"
+  },
+  "data": {
+    "fetch_window_hours": 336,
+    "sampling_minutes": 15,
+    "collection_table": "DATA_COLEC_H",
+    "tag_cd": 30001
+  },
+  "training": {
+    "min_history_days": 14,
+    "test_size": 0.15
+  },
+  "peak": {
+    "dev_id": 2001,
+    "model_dir": "models",
+    "config_table": "DEV_USE_PURP_REL_R",
+    "result_table": "MAX_DMAND_FCST_H"
+  },
+  "model_power": {
+    "objective": "regression",
+    "metric": "rmse",
+    "boosting_type": "gbdt",
+    "learning_rate": 0.05,
+    "num_leaves": 20,
+    "min_child_samples": 10,
+    "num_boost_round": 1000,
+    "early_stopping_rounds": 50,
+    "verbose": -1
+  },
+  "model_time": {
+    "objective": "regression",
+    "metric": "rmse",
+    "boosting_type": "gbdt",
+    "learning_rate": 0.05,
+    "num_leaves": 15,
+    "min_child_samples": 15,
+    "num_boost_round": 1000,
+    "early_stopping_rounds": 50,
+    "verbose": -1
+  }
+}
